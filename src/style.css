@@ -310,6 +310,7 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 .estimate { flex: none; display: flex; flex-direction: column; gap: 14px; padding: 26px 24px; background: var(--color-bg-surface); border-top: 1px solid var(--color-border-strong); }
 .estimate-row { display: flex; align-items: center; justify-content: space-between; }
 .price { margin: 0; display: flex; align-items: baseline; gap: 4px; color: var(--color-text-primary); font-weight: 600; line-height: 1.5; }
+.price > * { white-space: nowrap; }
 .price-tag { font-size: 15.48px; }
 #price { font-size: 24px; }          /* Display/Price */
 /* 적용 전 가격 (285:1793): 16 Medium · tertiary · 취소선 */
@@ -448,6 +449,11 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   .tb-view { padding: 6px 5px; font-size: 13px; }
   .tb-hand { font-size: 13px; padding: 6px 2px 6px 4px; }
   .estimate-sub .btn { padding: 10px 6px; font-size: 11px; white-space: normal; text-align: center; }
+  /* 적용 전 가격까지 한 줄에 들어가도록 */
+  .price { gap: 3px; }
+  .price-tag { font-size: 13px; }
+  .price-before { font-size: 13px; }
+  #price { font-size: 20px; }
   .gnb-brand { gap: 10px; }
   .logo { font-size: 14px; }
 }
