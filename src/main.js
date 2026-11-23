@@ -474,7 +474,6 @@ function render() {
 }
 
 /* ───────── 견적 · 변경사항 적용 (285:1793) ───────── */
-const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
 const ICON_SPIN = '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" opacity=".3"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 let applyPhase = null; // null | 'loading' | 'done'
@@ -507,7 +506,8 @@ function renderEstimate() {
     btn.innerHTML = `${ICON_CHECK}APPLIED`;
   } else if (n > 0) {
     btn.dataset.action = 'apply';
-    btn.innerHTML = `${ICON_REFRESH}APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
+    // Figma 285:1802: 아이콘 없이 글자 + 배지
+    btn.innerHTML = `APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
     btn.setAttribute('aria-label', `변경사항 ${n}개 적용하기`);
     return;
   } else {
