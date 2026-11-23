@@ -123,7 +123,31 @@ viewer.addEventListener('progress', (e) => {
   loadingText.textContent = `부케를 불러오고 있어요 · ${pct}%`;
 });
 let idealFov = 0;
+// 재질 톤: 왁스처럼 매끈한 반무광 꽃잎 + 가장자리 은은한 빛 (재질 레퍼런스 2026-11-23)
+// GLB는 용량 때문에 거칠기 0.9로 줄여 두었으니, 불러온 뒤 화면에서만 부드럽게 바꾼다
+// (sheen은 GLB에 KHR_materials_sheen이 있어야만 쓸 수 있어 넣지 않는다)
+const SOFT_LOOK = { roughness: 0.6, glow: 0.08 };
+
+function applySoftLook() {
+  for (const m of viewer.model?.materials ?? []) {
+    const pbr = m.pbrMetallicRoughness;
+    pbr.setMetallicFactor(0);
+    pbr.setRoughnessFactor(SOFT_LOOK.roughness);
+    // 꽃잎 색을 아주 살짝 스스로 빛나게 해, 빛이 비쳐 보이는 느낌을 흉내 낸다
+    const base = pbr.baseColorTexture?.texture;
+    if (base) {
+      m.emissiveTexture.setTexture(base);
+      m.setEmissiveFactor([SOFT_LOOK.glow, SOFT_LOOK.glow, SOFT_LOOK.glow]);
+    }
+  }
+}
+
 viewer.addEventListener('load', async () => {
+  try {
+    applySoftLook();
+  } catch (e) {
+    console.warn('soft look skipped', e);
+  }
   loading.classList.add('done');
   // 모델마다 화면에 꼭 맞는 화각을 구해 두고, 크기별로 배수를 곱한다
   viewer.fieldOfView = 'auto';
