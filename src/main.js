@@ -1,6 +1,7 @@
 import '@google/model-viewer';
 import shapesData from './data/shapes.json';
 import flowersData from './data/flowers.json';
+import { analyzeReference } from './analyze.js';
 
 /* ───────── 데이터 ───────── */
 const { shapes, sizes, fallback } = shapesData;
@@ -47,7 +48,7 @@ const byId = (list, id) => list.find((x) => x.id === id);
 // history = 패널에서 고르는 중인 값(draft), applied = APPLY CHANGES로 3D에 반영된 값
 const versions = [{ name: '시안 1', history: [structuredClone(DEFAULT_STATE)], index: 0, applied: structuredClone(DEFAULT_STATE), thumb: '' }];
 let current = 0;
-let refs = []; // { id, url, status: 'uploading' | 'done' | 'error' }
+let refs = []; // { id, url, status: 'uploading' | 'analyzing' | 'done' | 'error' }
 let lastCleared = null;
 
 const ver = () => versions[current];
@@ -389,6 +390,7 @@ function renderRefs() {
     d.className = 'thumb' + (r.status === 'done' ? ' done' : '');
     d.style.backgroundImage = `url(${r.url})`;
     if (r.status === 'uploading') d.innerHTML = '<div class="ov">올리는 중</div><div class="mini"><i></i></div>';
+    else if (r.status === 'analyzing') d.innerHTML = '<div class="ov">읽는 중</div>';
     else {
       const del = document.createElement('button');
       del.className = 'del';
@@ -640,18 +642,61 @@ async function downloadImage() {
   toast('시안 이미지를 저장했어요');
 }
 
-// 레퍼런스 사진 업로드 (프로토타입: 브라우저 안에서만 보관)
+// 분석 결과를 지금 데이터에 있는 값으로만 걸러 패널 값(draft)으로 만든다.
+// 꽃은 첫 번째 꽃의 색에 맞는, 판매 중인 꽃만 최대 3종. 못 읽은 항목은 지금 값을 그대로 둔다
+function patchFromAnalysis(result) {
+  const patch = {};
+  if (byId(shapes, result.shape)) patch.shape = result.shape;
+  const pick = (ids, list, colourKey, listKey) => {
+    const found = (ids || []).map((id) => byId(list, id)).filter((f) => f && f.available);
+    if (!found.length) return;
+    const colour = found[0].colour;
+    patch[colourKey] = colour;
+    patch[listKey] = found.filter((f) => f.colour === colour).slice(0, MAX_FLOWERS).map((f) => f.id);
+  };
+  pick(result.main, mainFlowers, 'mainColour', 'main');
+  pick(result.sub, subFlowers, 'subColour', 'sub');
+  return patch;
+}
+
+async function autofillFromReference(r, file) {
+  r.status = 'analyzing';
+  renderRefs();
+  try {
+    const patch = patchFromAnalysis(await analyzeReference(file));
+    r.status = 'done';
+    renderRefs();
+    if (!Object.keys(patch).length) return toast('사진에서 모양이나 꽃을 읽지 못했어요. 직접 골라 주세요');
+    const before = ver().index;
+    commit(patch);
+    const s = state();
+    const names = s.main.map((id) => byId(mainFlowers, id).name).join(' · ');
+    toast(`레퍼런스에서 채웠어요: ${byId(shapes, s.shape).label} · ${names}`, {
+      label: '되돌리기',
+      run: () => { ver().index = before; render(); },
+    });
+  } catch {
+    r.status = 'done';
+    renderRefs();
+    toast('사진을 읽지 못했어요. 직접 골라 주세요');
+  }
+}
+
+// 레퍼런스 사진 업로드: 올리면 사진을 읽어 모양·꽃을 자동으로 채운다 (3D는 APPLY CHANGES 때 반영)
 $('#ref-input').addEventListener('change', (e) => {
   const err = $('#ref-error');
   err.hidden = true;
   const files = [...e.target.files];
   e.target.value = '';
+  let first = null;
   for (const f of files) {
     if (refs.length >= MAX_REFS) { err.textContent = `사진은 최대 ${MAX_REFS}장까지 올릴 수 있어요.`; err.hidden = false; break; }
     if (f.size > MAX_REF_MB * 1024 * 1024) { err.textContent = `${MAX_REF_MB}MB가 넘는 사진은 올릴 수 없어요. JPG · PNG · HEIC 사진을 골라 주세요.`; err.hidden = false; continue; }
     const r = { id: crypto.randomUUID(), url: URL.createObjectURL(f), status: 'uploading' };
     refs.push(r);
-    setTimeout(() => { r.status = 'done'; renderRefs(); }, 700);
+    // 한 번에 여러 장을 올리면 첫 장으로 채운다
+    if (!first) { first = r; setTimeout(() => autofillFromReference(r, f), 700); }
+    else setTimeout(() => { r.status = 'done'; renderRefs(); }, 700);
   }
   renderRefs();
   updateClear();
