@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>상태 화면 미리보기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  /* DESIGN_TOKENS.json 값 */
+  :root {
+    --bg-canvas: #fffef2; --bg-surface: #ffffff; --bg-inverse: #16100e; --bg-swatch: #e2ded5;
+    --text-strong: #16100e; --text-primary: #3e322c; --text-secondary: #8a7f78; --text-tertiary: #aaa8a6;
+    --text-disabled: #ccc5bb; --text-on-inverse: #fffef2;
+    --border-default: #ccc5bb; --border-strong: #16100e;
+    --radius: 4px;
+    --focus: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--border-strong);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #efece4; color: var(--text-primary); font-family: 'Pretendard', -apple-system, sans-serif; letter-spacing: -0.02em; }
+  header.doc { padding: 32px 40px 8px; }
+  header.doc h1 { margin: 0; font-size: 22px; color: var(--text-strong); }
+  header.doc p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 24px; padding: 24px 40px 60px; }
+  .card { background: var(--bg-surface); border-radius: 8px; overflow: hidden; border: 1px solid #e5e0d6; }
+  .card > .meta { padding: 14px 18px; border-bottom: 1px solid #eee9df; }
+  .meta b { display: block; font-size: 14px; color: var(--text-strong); }
+  .meta span { font-size: 12px; color: var(--text-secondary); }
+  .stage { position: relative; height: 300px; background: radial-gradient(circle at 50% 40%, #fbf8ef 0%, #e9e2d3 75%); display: grid; place-items: center; }
+  .panel { padding: 20px 24px; background: var(--bg-surface); }
+  .panel-sm { padding: 16px 24px; }
+
+  /* 공통 요소 (기존 디자인과 동일) */
+  .label { font-size: 14px; font-weight: 500; color: var(--text-strong); }
+  .help { font-size: 13px; font-weight: 300; color: var(--text-secondary); line-height: 1.3; }
+  .btn { height: 44px; border-radius: var(--radius); font: inherit; font-size: 13px; cursor: pointer; padding: 0 16px; }
+  .btn-primary { background: var(--bg-inverse); color: var(--text-on-inverse); border: 0; font-size: 16px; font-weight: 600; width: 100%; }
+  .btn-secondary { background: var(--bg-surface); color: var(--text-strong); border: 1px solid var(--border-default); height: 42px; }
+  .btn-text { background: none; border: 0; color: var(--text-strong); height: 40px; }
+  .btn-text[disabled] { color: var(--text-disabled); cursor: default; }
+  .opt { height: 35px; border: 1px solid var(--border-default); background: var(--bg-surface); border-radius: var(--radius); font: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary); position: relative; }
+  .opt.sel { background: var(--bg-inverse); border-color: var(--bg-inverse); color: var(--text-on-inverse); }
+  .opt.hover { border-color: var(--border-strong); }
+  .opt.focus { box-shadow: var(--focus); }
+  .opt.soon { color: var(--text-disabled); border-style: dashed; }
+  .tag { position: absolute; top: -8px; right: 6px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 2px; font-size: 10px; font-weight: 500; color: var(--text-secondary); padding: 0 4px; line-height: 15px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 12px; }
+
+  /* 로딩 */
+  .loader { width: 220px; text-align: center; }
+  .bar { height: 2px; background: var(--bg-swatch); margin: 14px 0 10px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 62%; background: var(--bg-inverse); }
+  .silhouette { width: 90px; height: 150px; margin: 0 auto; border-radius: 45px 45px 10px 10px; background: linear-gradient(90deg, #ece6da 0%, #f7f3ea 50%, #ece6da 100%); background-size: 200% 100%; animation: sh 1.4s infinite linear; }
+  @keyframes sh { to { background-position: -200% 0; } }
+
+  /* 메시지 박스 (캔버스 위) */
+  .msg { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius); padding: 22px 24px; width: 300px; text-align: center; }
+  .msg h4 { margin: 10px 0 6px; font-size: 16px; color: var(--text-strong); font-weight: 600; }
+  .msg p { margin: 0 0 16px; }
+  .icon { width: 24px; height: 24px; display: inline-block; }
+
+  /* 토스트 */
+  .toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-inverse); color: var(--text-on-inverse); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  .toast a { color: var(--text-on-inverse); text-decoration: underline; margin-left: 6px; }
+
+  /* 썸네일 업로드 */
+  .thumbs { display: flex; gap: 4px; margin-top: 8px; }
+  .thumb { width: 60px; height: 77px; border-radius: 2px; background: var(--bg-swatch); position: relative; overflow: hidden; }
+  .thumb.img { background: linear-gradient(160deg, #f2c9c2, #e9d9b8 60%, #a9bf8f); }
+  .thumb.add { background: var(--bg-surface); border: 1px dashed var(--border-default); display: grid; place-items: center; color: var(--text-secondary); font-size: 16px; }
+  .thumb .ov { position: absolute; inset: 0; background: rgba(22,16,14,.55); color: var(--text-on-inverse); font-size: 11px; display: grid; place-items: center; text-align: center; }
+  .thumb .ov.err { background: rgba(255,254,242,.9); color: var(--text-strong); border: 1px solid var(--border-strong); }
+  .thumb .mini { position: absolute; left: 6px; right: 6px; bottom: 8px; height: 2px; background: rgba(255,255,255,.35); }
+  .thumb .mini i { display: block; height: 100%; width: 45%; background: var(--text-on-inverse); }
+  .inline-err { margin-top: 10px; font-size: 13px; color: var(--text-strong); display: flex; gap: 6px; align-items: flex-start; }
+
+  /* 모달 */
+  .dim { position: relative; height: 340px; background: rgba(22,16,14,.45); display: grid; place-items: center; }
+  .modal { background: var(--bg-surface); border-radius: var(--radius); width: 340px; padding: 24px; }
+  .modal h4 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: var(--text-strong); }
+  .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 20px; }
+  .summary { border-top: 1px solid var(--border-default); margin-top: 14px; padding-top: 12px; font-size: 13px; }
+  .summary div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .summary div span:first-child { color: var(--text-secondary); }
+  .price { font-size: 24px; font-weight: 600; color: var(--text-strong); }
+
+  /* 꽃 목록 빈 상태 */
+  .empty { border: 1px dashed var(--border-default); border-radius: var(--radius); padding: 20px; text-align: center; margin-top: 12px; }
+  .empty p { margin: 6px 0 12px; }
+  .row-states { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  .row-states small { width: 100%; color: var(--text-secondary); font-size: 11px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header class="doc">
+  <h1>상태 화면 미리보기 · FLORENCE FLOWER</h1>
+  <p>Figma 구현 페이지에 없는 상태를 기존 토큰(색·Pretendard·radius 4·1px 선)으로 설계했어요. 확인 후 고칠 점을 알려주세요.</p>
+</header>
+
+<div class="grid">
+
+  <!-- 1. 3D 로딩 -->
+  <section class="card">
+    <div class="meta"><b>① 3D 불러오는 중</b><span>캔버스 · 첫 진입, 모양 변경 시</span></div>
+    <div class="stage">
+      <div class="loader">
+        <div class="silhouette"></div>
+        <div class="bar"><i></i></div>
+        <div class="help">부케를 불러오고 있어요 · 62%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 3D 로드 실패 -->
+  <section class="card">
+    <div class="meta"><b>② 3D를 불러오지 못했을 때</b><span>캔버스 · 네트워크 오류, 파일 없음</span></div>
+    <div class="stage">
+      <div class="msg">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#16100e" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>
+        <h4>부케를 불러오지 못했어요</h4>
+        <p class="help">인터넷 연결을 확인하고 다시 시도해 주세요.<br>고른 내용은 그대로 남아 있어요.</p>
+        <button class="btn btn-secondary" style="width:100%">다시 시도</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 모양 준비 중 -->
+  <section class="card">
+    <div class="meta"><b>③ 아직 3D가 없는 모양</b><span>패널 옵션 + 캔버스 토스트 · 모델 준비 전 대체 표시</span></div>
+    <div class="panel">
+      <div class="label">SHAPE OF BOUQUET</div>
+      <div class="opts">
+        <button class="opt soon">라운드<span class="tag">준비 중</span></button>
+        <button class="opt sel">내추럴</button>
+        <button class="opt soon">캐스케이드<span class="tag">준비 중</span></button>
+        <button class="opt soon">크레센트<span class="tag">준비 중</span></button>
+      </div>
+    </div>
+    <div class="stage" style="height:150px">
+      <div class="toast">이 모양은 3D를 준비하고 있어요. 지금은 내추럴로 보여드려요</div>
+    </div>
+  </section>
+
+  <!-- 4. 사진 업로드 -->
+  <section class="card">
+    <div class="meta"><b>④ 사진 올리는 중 · 실패</b><span>REFERENCE IMAGE / DRESS IMAGE 공통</span></div>
+    <div class="panel">
+      <div class="label" style="font-size:13px;font-weight:300;color:var(--text-primary)">MY REFERENCE(S)</div>
+      <div class="thumbs">
+        <div class="thumb img"></div>
+        <div class="thumb img"><div class="ov">올리는 중</div><div class="mini"><i></i></div></div>
+        <div class="thumb img"><div class="ov err">다시<br>올리기</div></div>
+        <div class="thumb add">+</div>
+      </div>
+      <div class="inline-err">
+        <svg class="icon" style="width:16px;height:16px;flex:none" viewBox="0 0 24 24" fill="none" stroke="#16100e" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>
+        <span>20MB가 넘는 사진은 올릴 수 없어요. JPG · PNG · HEIC 사진을 골라 주세요.</span>
+      </div>
+      <p class="help" style="margin:10px 0 0">사진은 최대 5장까지 올릴 수 있어요.</p>
+    </div>
+  </section>
+
+  <!-- 5. 이 색에 맞는 꽃 없음 -->
+  <section class="card">
+    <div class="meta"><b>⑤ 고른 색에 맞는 꽃이 없을 때</b><span>COLOUR &amp; FLOWERS · 이번 주 입고 없음</span></div>
+    <div class="panel">
+      <div class="label" style="font-size:13px">MAIN FLOWERS <span class="help" style="float:right">Burgundy 0 types</span></div>
+      <div class="empty">
+        <div class="label" style="font-size:14px">이번 주엔 이 색의 꽃이 없어요</div>
+        <p class="help">비슷한 색을 고르거나, 플로리스트에게 물어볼 수 있어요.</p>
+        <button class="btn btn-secondary" style="height:34px;font-size:12px;font-weight:600">비슷한 색 보기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. CLEAR 확인 -->
+  <section class="card">
+    <div class="meta"><b>⑥ CLEAR 누를 때 확인</b><span>모달 · 되돌릴 수 없는 동작</span></div>
+    <div class="dim">
+      <div class="modal">
+        <h4>고른 내용을 모두 지울까요?</h4>
+        <p class="help" style="margin:0">모양, 크기, 꽃, 올린 사진이 처음 상태로 돌아가요. 저장한 시안 이미지는 지워지지 않아요.</p>
+        <div class="row">
+          <button class="btn btn-secondary">취소</button>
+          <button class="btn btn-primary" style="font-size:13px">모두 지우기</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. ASK TO FLORIST 보내기 전 확인 -->
+  <section class="card">
+    <div class="meta"><b>⑦ ASK TO FLORIST · 보내기 전 확인</b><span>모달 · 시안 = 주문서</span></div>
+    <div class="dim" style="height:420px">
+      <div class="modal">
+        <h4>이 시안을 플로리스트에게 보낼까요?</h4>
+        <p class="help" style="margin:0">보낸 뒤에도 확정 전까지는 언제든 고칠 수 있어요.</p>
+        <div class="summary">
+          <div><span>모양 · 크기</span><span>내추럴 · 미디엄</span></div>
+          <div><span>메인 꽃</span><span>장미 줄리엣 외 1종</span></div>
+          <div><span>서브 꽃</span><span>스프레이 장미 아이보리</span></div>
+          <div><span>조명</span><span>자연광</span></div>
+          <div style="align-items:baseline"><span>(예상)</span><span class="price">186,000원</span></div>
+        </div>
+        <div class="row">
+          <button class="btn btn-secondary">더 고칠게요</button>
+          <button class="btn btn-primary" style="font-size:13px">보내기</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 전송 완료 -->
+  <section class="card">
+    <div class="meta"><b>⑧ 보내기 완료</b><span>모달 · ASK TO FLORIST 이후</span></div>
+    <div class="dim">
+      <div class="modal" style="text-align:center">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#16100e" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></svg>
+        <h4 style="margin-top:10px">플로리스트에게 시안을 보냈어요</h4>
+        <p class="help" style="margin:0">플로리스트가 확인하면 카카오톡으로 알려드려요.<br>확정 전까지는 언제든 고칠 수 있어요.</p>
+        <div class="row">
+          <button class="btn btn-secondary">이미지 저장</button>
+          <button class="btn btn-primary" style="font-size:13px">확인</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. 이미지 저장 토스트 -->
+  <section class="card">
+    <div class="meta"><b>⑨ DOWNLOAD IMAGE 완료 · 되돌리기 안내</b><span>캔버스 하단 토스트 · 3초 후 사라짐</span></div>
+    <div class="stage" style="height:200px">
+      <div class="toast" style="bottom:110px">
+        <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#fffef2" stroke-width="1.8"><path d="M6 12.5l4 4L18 8.5"/></svg>
+        시안 이미지를 저장했어요
+      </div>
+      <div class="toast">모두 지웠어요 <a href="#">되돌리기</a></div>
+    </div>
+  </section>
+
+  <!-- 10. 인터랙션 상태 -->
+  <section class="card">
+    <div class="meta"><b>⑩ Hover · Focus · Disabled</b><span>옵션 버튼 · 버튼 공통</span></div>
+    <div class="panel">
+      <div class="row-states">
+        <button class="opt" style="width:96px">기본</button>
+        <button class="opt hover" style="width:96px">Hover</button>
+        <button class="opt focus" style="width:96px">Focus</button>
+        <button class="opt sel" style="width:96px">선택됨</button>
+        <small>Hover: 테두리 #16100e · Focus(키보드): 2px 흰 간격 + 2px #16100e 링 · 선택됨: 반전</small>
+      </div>
+      <div class="row-states">
+        <button class="btn btn-secondary" style="width:184px;white-space:nowrap">DOWNLOAD IMAGE</button>
+        <button class="btn btn-text" disabled>CLEAR</button>
+        <button class="btn btn-text">CLEAR</button>
+        <small>CLEAR: 바뀐 내용이 없으면 비활성(#ccc5bb), 있으면 활성(#16100e)</small>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

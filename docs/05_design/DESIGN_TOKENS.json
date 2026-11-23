@@ -1,0 +1,57 @@
+{
+  "$source": "Figma 부케 시안 서비스 기획 장표 · 구현 페이지 Variables",
+  "color": {
+    "bg": {
+      "canvas": "#fffef2",
+      "surface": "#ffffff",
+      "inverse": "#16100e",
+      "swatch": "#e2ded5"
+    },
+    "text": {
+      "strong": "#16100e",
+      "primary": "#3e322c",
+      "secondary": "#8a7f78",
+      "tertiary": "#aaa8a6",
+      "disabled": "#ccc5bb",
+      "onInverse": "#fffef2"
+    },
+    "border": {
+      "default": "#ccc5bb",
+      "strong": "#16100e"
+    }
+  },
+  "font": {
+    "family": "'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif",
+    "letterSpacing": "-1px",
+    "display.price": { "size": 24, "weight": 600, "lineHeight": 1.5 },
+    "body.description": { "size": 16, "weight": 400, "lineHeight": 1.3 },
+    "button.large": { "size": 16, "weight": 600, "lineHeight": 1.5 },
+    "brand.logo": { "size": 15, "weight": 600, "lineHeight": 1.5 },
+    "heading.section": { "size": 14, "weight": 500, "lineHeight": 1.3 },
+    "tab.view": { "size": 14, "weight": 500, "lineHeight": 1.5 },
+    "nav.menu": { "size": 13, "weight": 400, "lineHeight": 1.5 },
+    "tab.panel": { "size": 13, "weight": 500, "lineHeight": 1.5 },
+    "button.medium": { "size": 13, "weight": 400, "lineHeight": 1.5 },
+    "option.title": { "size": 13, "weight": 600, "lineHeight": 1.3 },
+    "label.sub": { "size": 13, "weight": 300, "lineHeight": 1.3 },
+    "button.small": { "size": 12, "weight": 600, "lineHeight": 1.3 },
+    "option.sub": { "size": 11, "weight": 400, "lineHeight": 1.3 },
+    "caption.regular": { "size": 11, "weight": 400, "lineHeight": 1.5 },
+    "caption.medium": { "size": 11, "weight": 500, "lineHeight": 1.5 },
+    "caption.bold": { "size": 11, "weight": 700, "lineHeight": 1.5 }
+  },
+  "radius": { "default": 4 },
+  "spacing": { "4": 4, "6": 6, "8": 8, "12": 12, "16": 16, "20": 20, "24": 24 },
+  "size": {
+    "header": 52,
+    "panelWidth": 420,
+    "panelPadding": 24,
+    "panelTab": 54,
+    "sectionClosed": 60,
+    "buttonPrimary": 44,
+    "buttonSecondary": 42,
+    "icon": 24,
+    "chip": 24
+  },
+  "breakpoint": { "desktop": 1920, "tablet": 1024, "tabletSmall": 860, "mobile": 859, "mobileMin": 360 }
+}

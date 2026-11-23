@@ -1,0 +1,48 @@
+{
+  "_note": "프로토타입용 더미 데이터. 가격은 1송이 기준(원). available=false는 '판매 시즌이 아니에요'로 표시한다.",
+  "pricing": {
+    "_formula": "예상 금액 = 제작·포장비 + 그린·필러(크기별) + 메인 꽃 평균 단가 × 메인 송이 수 + 서브 꽃 평균 단가 × 서브 송이 수 + 모양 추가금",
+    "base": 130000,
+    "filler": { "small": 12000, "medium": 18000, "large": 26000 },
+    "mainStems": { "small": 4, "medium": 6, "large": 9 },
+    "subStems": { "small": 6, "medium": 9, "large": 13 },
+    "shapeExtra": { "round": 0, "natural": 0, "cascade": 30000, "crescent": 40000 }
+  },
+  "mainColours": [
+    { "id": "blush", "label": "Blush Pink", "swatch": "#e8b4b6" },
+    { "id": "white", "label": "Pure White", "swatch": "#f7f5ef" },
+    { "id": "peach", "label": "Peach", "swatch": "#f0c0a0" },
+    { "id": "coral", "label": "Coral Red", "swatch": "#c4525b" }
+  ],
+  "subColours": [
+    { "id": "ivory", "label": "Ivory", "swatch": "#efe6d2" },
+    { "id": "green", "label": "Green", "swatch": "#a8b78a" },
+    { "id": "lavender", "label": "Lavender", "swatch": "#cdbfe0" },
+    { "id": "burgundy", "label": "Burgundy", "swatch": "#6b2a33" }
+  ],
+  "mainFlowers": [
+    { "id": "juliet", "name": "장미 줄리엣", "colour": "blush", "price": 6500, "available": true, "swatch": "#eab2ab" },
+    { "id": "ranunculus-pink", "name": "라넌큘러스 핑크", "colour": "blush", "price": 5000, "available": true, "swatch": "#f1bcc4" },
+    { "id": "tulip-pink", "name": "튤립 핑크", "colour": "blush", "price": 4500, "available": true, "swatch": "#f0a9b6" },
+    { "id": "peony-pink", "name": "작약 핑크", "colour": "blush", "price": 9000, "available": false, "swatch": "#e9a3b3" },
+    { "id": "lily-white", "name": "백합 화이트", "colour": "white", "price": 8000, "available": true, "swatch": "#f6f3ea" },
+    { "id": "phalaenopsis-white", "name": "호접란 화이트", "colour": "white", "price": 12000, "available": true, "swatch": "#fbfaf6" },
+    { "id": "calla-white", "name": "카라 화이트", "colour": "white", "price": 7000, "available": true, "swatch": "#f2f0e2" },
+    { "id": "tulip-white", "name": "튤립 화이트", "colour": "white", "price": 4500, "available": true, "swatch": "#f4efdc" },
+    { "id": "rose-peach", "name": "장미 피치", "colour": "peach", "price": 6000, "available": true, "swatch": "#f3bc9b" },
+    { "id": "ranunculus-peach", "name": "라넌큘러스 피치", "colour": "peach", "price": 5000, "available": true, "swatch": "#f5c8a8" },
+    { "id": "calla-coral", "name": "카라 코랄", "colour": "coral", "price": 7500, "available": true, "swatch": "#c95a5f" },
+    { "id": "tulip-red", "name": "튤립 레드", "colour": "coral", "price": 4500, "available": false, "swatch": "#c23a3e" }
+  ],
+  "subFlowers": [
+    { "id": "spray-ivory", "name": "스프레이 장미 아이보리", "colour": "ivory", "price": 3000, "available": true, "swatch": "#efe5cf" },
+    { "id": "gypsophila", "name": "안개꽃", "colour": "ivory", "price": 2000, "available": true, "swatch": "#f6f3ec" },
+    { "id": "waxflower", "name": "왁스플라워", "colour": "ivory", "price": 2500, "available": true, "swatch": "#f1e9e4" },
+    { "id": "lisianthus-ivory", "name": "리시안셔스 아이보리", "colour": "ivory", "price": 3500, "available": false, "swatch": "#eee6d3" },
+    { "id": "eucalyptus", "name": "유칼립투스", "colour": "green", "price": 2500, "available": true, "swatch": "#9fb2a0" },
+    { "id": "ruscus", "name": "루스커스", "colour": "green", "price": 2000, "available": true, "swatch": "#7f9a6a" },
+    { "id": "sweetpea", "name": "스위트피", "colour": "lavender", "price": 3500, "available": true, "swatch": "#cbb8e2" },
+    { "id": "scabiosa", "name": "스카비오사", "colour": "lavender", "price": 3000, "available": true, "swatch": "#bfb0d8" },
+    { "id": "cosmos-chocolate", "name": "초코 코스모스", "colour": "burgundy", "price": 4000, "available": true, "swatch": "#5a2229" }
+  ]
+}

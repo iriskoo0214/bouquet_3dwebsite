@@ -1,0 +1,58 @@
+{
+  "fallback": "/models/shapes/natural.glb",
+  "sizes": {
+    "small": {
+      "label": "스몰",
+      "stems": "3~4송이",
+      "scale": 0.8
+    },
+    "medium": {
+      "label": "미디엄",
+      "stems": "5~7송이",
+      "scale": 1.0
+    },
+    "large": {
+      "label": "라지",
+      "stems": "8송이 이상",
+      "scale": 1.2
+    }
+  },
+  "shapes": [
+    {
+      "id": "round",
+      "label": "라운드",
+      "description": "둥글고 빽빽하게 모은 기본형",
+      "model": "/models/shapes/round.glb",
+      "orientation": "0deg 0deg -90deg",
+      "ready": true,
+      "variants": {
+        "tulip-white": "/models/shapes/round__tulip-white.glb"
+      }
+    },
+    {
+      "id": "natural",
+      "label": "내추럴",
+      "description": "줄기가 보이게 느슨하고 자연스럽게",
+      "model": "/models/shapes/natural.glb",
+      "orientation": "0deg 0deg 0deg",
+      "ready": true
+    },
+    {
+      "id": "cascade",
+      "label": "캐스케이드",
+      "description": "위는 풍성하고, 아래로 폭포처럼 길게 흘러내리는",
+      "model": "/models/shapes/cascade.glb",
+      "orientation": "0deg 0deg -90deg",
+      "ready": true
+    },
+    {
+      "id": "crescent",
+      "label": "크레센트",
+      "description": "초승달처럼 한쪽 또는 양쪽으로 휘어지는",
+      "model": "/models/shapes/crescent.glb",
+      "orientation": "0deg 0deg -90deg",
+      "ready": true
+    }
+  ],
+  "_note": "모양은 4종: 라운드·내추럴·캐스케이드·크레센트 (2026-11-18 확정). 모델이 없는 모양은 fallback(내추럴)을 보여준다. orientation = model-viewer orientation(roll pitch yaw)."
+}

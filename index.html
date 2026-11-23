@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FLORENCE FLOWER · 부케 시안</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!-- Header / 글로벌 (240:3088) -->
+    <header class="gnb" id="gnb">
+      <div class="gnb-brand">
+        <!-- 1439px 이하: 메뉴 아이콘 (244:1885) -->
+        <button class="gnb-menu-btn" data-action="menu" aria-label="메뉴 열기" aria-expanded="false" aria-controls="gnb-menu">
+          <img src="/assets/figma/menu.svg" width="24" height="24" alt="" />
+        </button>
+        <a class="logo" href="#">FLORENCE FLOWER</a>
+      </div>
+      <!-- 859px 이하: 패널 열기 버튼 (244:2375) -->
+      <button class="panel-btn" data-action="panel" aria-label="부케 설정 열기" aria-expanded="false" aria-controls="panel">
+        <img src="/assets/figma/panel-filter.svg" width="20" height="20" alt="" />
+      </button>
+      <nav class="gnb-menu" id="gnb-menu" aria-label="글로벌 메뉴">
+        <a href="#">HOME</a>
+        <a href="#" aria-current="page">BOUQUET</a>
+        <a href="#">ABOUT</a>
+        <a href="#">CONTACT</a>
+      </nav>
+    </header>
+
+    <div class="builder">
+      <!-- canvas (240:3030) -->
+      <main class="canvas" id="canvas" aria-label="부케 3D 미리보기">
+        <model-viewer
+          id="viewer"
+          alt="고른 부케의 3D 시안"
+          camera-controls
+          touch-action="pan-y"
+          interaction-prompt="none"
+          shadow-intensity="0.6"
+          shadow-softness="1"
+          exposure="1.05"
+          environment-image="neutral"
+          camera-orbit="0deg 80deg auto"
+          min-camera-orbit="auto 5deg auto"
+          max-camera-orbit="auto 175deg auto"
+          field-of-view="auto"
+          max-field-of-view="70deg"
+          interpolation-decay="120"
+        ></model-viewer>
+
+        <div class="state-loading" id="loading" role="status" aria-live="polite">
+          <div class="silhouette"></div>
+          <div class="bar"><i id="loading-bar"></i></div>
+          <p class="help-sm" id="loading-text">부케를 불러오고 있어요 · 0%</p>
+        </div>
+
+        <div class="state-error" id="load-error" hidden>
+          <div class="msg">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>
+            <h4>부케를 불러오지 못했어요</h4>
+            <p class="help-sm">인터넷 연결을 확인하고 다시 시도해 주세요.<br />고른 내용은 그대로 남아 있어요.</p>
+            <button class="btn btn-secondary btn-block" id="retry">다시 시도</button>
+          </div>
+        </div>
+
+        <!-- 360도 회전 안내 (240:3043) -->
+        <div class="drag-hint" id="drag-hint" aria-hidden="true">
+          <img class="hint-circle" src="/assets/figma/hint-circle.svg" width="64" height="64" alt="" />
+          <p class="hint-tooltip">드래그해서 360° 돌리기</p>
+        </div>
+
+        <!-- 좌우 화살표 (240:3042 / 240:3041) -->
+        <button class="canvas-arrow left" data-action="rotate-left" aria-label="왼쪽으로 90° 돌리기">
+          <img src="/assets/figma/arrow-dark.svg" width="64" height="64" alt="" />
+        </button>
+        <button class="canvas-arrow right" data-action="rotate-right" aria-label="오른쪽으로 90° 돌리기">
+          <img src="/assets/figma/arrow-light.svg" width="64" height="64" alt="" />
+        </button>
+
+        <!-- Section / 시안 버전 (240:3032) -->
+        <section class="versions" aria-label="시안 버전">
+          <p class="caption">VERSION</p>
+          <div class="version-list" id="version-list"></div>
+        </section>
+
+        <!-- Toolbar / 미리보기 (240:3047) -->
+        <div class="toolbar" role="toolbar" aria-label="3D 보기 도구">
+          <div class="tb-group tb-history">
+            <button class="tb-icon" data-action="undo" aria-label="실행 취소 (⌘Z)">
+              <img src="/assets/figma/undo.svg" width="24" height="24" alt="" />
+            </button>
+            <button class="tb-icon" data-action="redo" aria-label="다시 실행 (⇧⌘Z)">
+              <img src="/assets/figma/redo.svg" width="24" height="24" alt="" />
+            </button>
+          </div>
+          <span class="tb-divider" aria-hidden="true"></span>
+          <div class="tb-group tb-views" role="group" aria-label="보기 방향">
+            <button class="tb-view" data-view="front" aria-pressed="true">앞</button>
+            <button class="tb-view" data-view="back" aria-pressed="false">뒤</button>
+            <button class="tb-view" data-view="top" aria-pressed="false">위</button>
+            <button class="tb-view" data-view="bottom" aria-pressed="false">아래</button>
+          </div>
+          <span class="tb-divider" aria-hidden="true"></span>
+          <button class="tb-hand" data-action="hand" aria-pressed="false">
+            HAND
+            <span class="eye"><img src="/assets/figma/eye.svg" width="17" height="13" alt="" /></span>
+          </button>
+        </div>
+
+        <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+      </main>
+
+      <!-- Panel / 부케 설정 (240:3070) -->
+      <aside class="panel" id="panel" aria-label="부케 설정">
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tab-flower" aria-selected="true" aria-controls="pane-flower">I. FLOWER</button>
+          <button role="tab" id="tab-dress" aria-selected="false" aria-controls="pane-dress">II. DRESS</button>
+        </div>
+
+        <div class="panel-scroll">
+          <div role="tabpanel" id="pane-flower" aria-labelledby="tab-flower">
+            <!-- Section / 참고 이미지 -->
+            <section class="section section-ref">
+              <div class="section-content">
+                <h3 class="section-title">REFERENCE IMAGE</h3>
+                <label class="btn-upload">
+                  UPLOAD IMAGE
+                  <input type="file" id="ref-input" accept="image/jpeg,image/png,image/heic,image/heif" multiple hidden />
+                </label>
+              </div>
+              <div class="ref-list">
+                <p class="field-name">MY REFERENCE(S)</p>
+                <div class="thumbs" id="ref-thumbs"></div>
+              </div>
+              <p class="inline-err" id="ref-error" hidden></p>
+              <p class="help">원하는 분위기의 부케나 꽃 사진을 올려 주세요. 참고 이미지를 바탕으로 비슷한 느낌의 부케를 추천해 드려요.</p>
+            </section>
+
+            <!-- Section / 부케 모양 -->
+            <section class="section accordion" data-section="shape">
+              <button class="acc-head" aria-expanded="true">
+                <span class="section-title">SHAPE OF BOUQUET</span>
+                <span class="acc-summary" data-summary="shape"></span>
+                <span class="acc-icon" aria-hidden="true"></span>
+              </button>
+              <div class="acc-body">
+                <div class="opts opts-2" role="radiogroup" aria-label="부케 모양" id="shape-options"></div>
+                <p class="help">모양을 바꾸면 꽃 수량과 배치가 새 모양에 맞춰 바뀌고, 가격도 다시 계산돼요.</p>
+              </div>
+            </section>
+            <hr class="divider" />
+
+            <!-- Section / 부케 크기 -->
+            <section class="section accordion" data-section="size">
+              <button class="acc-head" aria-expanded="true">
+                <span class="section-title">SIZE OF BOUQUET</span>
+                <span class="acc-summary" data-summary="size"></span>
+                <span class="acc-icon" aria-hidden="true"></span>
+              </button>
+              <div class="acc-body">
+                <div class="opts opts-3" role="radiogroup" aria-label="부케 크기" id="size-options"></div>
+                <p class="help">부케 크기에 따라 가격도 다시 계산돼요.</p>
+              </div>
+            </section>
+            <hr class="divider" />
+
+            <!-- Section / 부케 색상 -->
+            <section class="section accordion" data-section="flowers">
+              <button class="acc-head" aria-expanded="true">
+                <span class="section-title" data-open-title="BOUQUET COLOUR" data-closed-title="COLOUR &amp; FLOWERS">BOUQUET COLOUR</span>
+                <span class="acc-summary" data-summary="flowers"></span>
+                <span class="acc-icon" aria-hidden="true"></span>
+              </button>
+              <div class="acc-body">
+                <div class="flower-group">
+                  <div class="field">
+                    <div class="field-label"><span class="field-name">THEME COLOUR</span><span class="field-value strong" id="main-colour-label"></span></div>
+                    <div class="swatches" role="radiogroup" aria-label="테마 색상" id="main-colours"></div>
+                  </div>
+                  <div class="field">
+                    <div class="field-label"><span class="field-name">MAIN FLOWERS</span><span class="field-value" id="main-count"></span></div>
+                    <div class="flower-list" id="main-flowers"></div>
+                  </div>
+                </div>
+                <div class="flower-group">
+                  <div class="field">
+                    <div class="field-label"><span class="field-name">SUB COLOUR</span><span class="field-value strong" id="sub-colour-label"></span></div>
+                    <div class="swatches" role="radiogroup" aria-label="서브 색상" id="sub-colours"></div>
+                  </div>
+                  <div class="field">
+                    <div class="field-label"><span class="field-name">SUB FLOWERS</span><span class="field-value" id="sub-count"></span></div>
+                    <div class="flower-list" id="sub-flowers"></div>
+                  </div>
+                </div>
+                <p class="help">색을 바꾸면 그 색에 맞는 꽃만 보여요. 가격은 꽃 시세에 따라 조금 달라질 수 있어요.</p>
+              </div>
+            </section>
+            <hr class="divider" />
+
+            <!-- Section / 조명 -->
+            <section class="section accordion" data-section="lighting">
+              <button class="acc-head" aria-expanded="true">
+                <span class="section-title">LIGHTING</span>
+                <span class="acc-summary" data-summary="lighting"></span>
+                <span class="acc-icon" aria-hidden="true"></span>
+              </button>
+              <div class="acc-body">
+                <div class="opts opts-3" role="radiogroup" aria-label="조명" id="lighting-options"></div>
+                <p class="help">조명에 따라 부케가 어떻게 보이는지 확인해 보세요.</p>
+              </div>
+            </section>
+          </div>
+
+          <div role="tabpanel" id="pane-dress" aria-labelledby="tab-dress" hidden>
+            <div class="empty">
+              <p class="label">드레스와 함께 보기는 준비 중이에요</p>
+              <p class="help-sm">드레스 사진과 샘플 드레스는 다음 단계에서 열려요.</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- 모바일: 고른 값 칩 (244:2661) -->
+        <div class="choice-bar" id="choice-bar" aria-label="고른 항목"></div>
+      </aside>
+
+      <!-- Panel / 견적 및 내보내기 (240:3071) · 변경 후 상태: Panel / 견적 적용하기 (285:1793) -->
+      <div class="estimate">
+        <div class="estimate-row">
+          <!-- 안내 문구는 ⓘ 툴팁으로 (285:1795) -->
+          <div class="info">
+            <button class="info-btn" aria-label="가격 안내" aria-describedby="price-note">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="8" r=".9" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <span class="info-tip" role="tooltip" id="price-note">꽃 시세에 따라 조금 달라질 수 있어요</span>
+          </div>
+          <p class="price">
+            <span class="price-tag">(예상)</span>
+            <s class="price-before" id="price-before" hidden></s>
+            <span id="price">0원</span>
+          </p>
+        </div>
+        <div class="estimate-actions">
+          <!-- 고른 옵션이 3D에 반영되기 전엔 APPLY CHANGES, 반영된 뒤엔 ASK TO FLORIST -->
+          <button class="btn btn-primary btn-block" id="primary-action" data-action="ask">ASK TO FLORIST</button>
+          <p class="sr-only" id="apply-status" role="status" aria-live="polite"></p>
+          <div class="estimate-sub">
+            <button class="btn btn-secondary btn-download" data-action="download">
+            <img src="/assets/figma/download.svg" width="18" height="18" alt="" />
+            DOWNLOAD IMAGE
+            </button>
+            <button class="btn btn-text" data-action="clear" disabled>CLEAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dim" id="clear-modal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="clear-title">
+        <h4 id="clear-title">고른 내용을 모두 지울까요?</h4>
+        <p class="help-sm">모양, 크기, 꽃, 조명, 올린 사진이 처음 상태로 돌아가요. 저장한 시안 이미지는 지워지지 않아요.</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" data-action="clear-cancel">취소</button>
+          <button class="btn btn-primary" data-action="clear-confirm">모두 지우기</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
