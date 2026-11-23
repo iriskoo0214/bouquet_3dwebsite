@@ -26,7 +26,10 @@ const LIGHTING = [
   { id: 'indoor', label: '실내광', exposure: 0.95 },
   { id: 'dim', label: '어두운 조명', exposure: 0.62 },
 ];
-const ICON = '/assets/figma/';
+// HTML·CSS의 /assets 경로는 Vite가 빌드 때 base를 붙여 주지만, JS 문자열은 직접 붙여야 한다
+const BASE = import.meta.env.BASE_URL;
+const withBase = (p) => BASE + p.replace(/^\//, '');
+const ICON = withBase('/assets/figma/');
 
 const VIEWS = {
   front: '0deg 80deg auto',
@@ -100,7 +103,7 @@ let currentView = 'front';
 function loadModel(shapeId, mainFlowerId) {
   const shape = byId(shapes, shapeId);
   const variant = shape.variants?.[mainFlowerId];
-  const src = shape.ready ? variant || shape.model : fallback;
+  const src = withBase(shape.ready ? variant || shape.model : fallback);
   if (currentSrc === src) return false;
   currentSrc = src;
   loadError.hidden = true;
