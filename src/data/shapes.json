@@ -1,5 +1,7 @@
 {
   "fallback": "/models/shapes/natural.glb",
+  "spin": { "dir": "/spins/natural__calla-white", "frames": 219, "plain": true, "blend": true, "bg": "#d7d8d6", "autoplay": 9.1,
+    "tilt": { "dir": "/spins/natural__calla-white/tilt", "frames": 63 } },
   "sizes": {
     "small": {
       "label": "스몰",
@@ -35,11 +37,7 @@
       "description": "줄기가 보이게 느슨하고 자연스럽게",
       "model": "/models/shapes/natural.glb",
       "orientation": "0deg 0deg 0deg",
-      "ready": true,
-      "spins": {
-        "calla-white": { "dir": "/spins/natural__calla-white", "frames": 219, "plain": true, "blend": true, "bg": "#d7d8d6", "autoplay": 9.1,
-          "tilt": { "dir": "/spins/natural__calla-white/tilt", "frames": 63 } }
-      }
+      "ready": true
     },
     {
       "id": "cascade",

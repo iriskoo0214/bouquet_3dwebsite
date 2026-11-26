@@ -10,13 +10,15 @@ const MAX_FLOWERS = 3;
 const MAX_REFS = 5;
 const MAX_REF_MB = 20;
 
+// 처음 화면은 회전 영상 속 부케와 같게: 내추럴 · 카라 화이트 + 스위트피
+// 크기는 영상이 원래 크기로 보이는 미디엄
 const DEFAULT_STATE = {
-  shape: 'round',
-  size: 'small',
-  mainColour: 'blush',
-  main: ['juliet'],
-  subColour: 'ivory',
-  sub: ['spray-ivory'],
+  shape: 'natural',
+  size: 'medium',
+  mainColour: 'white',
+  main: ['calla-white'],
+  subColour: 'lavender',
+  sub: ['sweetpea'],
   lighting: 'natural',
 };
 
@@ -101,11 +103,12 @@ let currentView = 'front';
 
 // 모양별 기본 모델에, 첫 번째 메인 꽃 전용 모델(variants)이 있으면 그걸 쓴다
 // 모델이 바뀌면 true를 돌려준다
-// 실사 회전 영상(spins)이 있는 조합은 3D 대신 회전 프레임을 보여 준다
+// 실사 회전 영상: 조합 전용(spins)이 있으면 그걸, 없으면 모든 모양·꽃에 공통 회전 영상(spin)을 보여 준다
+const { spin: defaultSpin } = shapesData;
 function loadModel(shapeId, mainFlowerId) {
   const shape = byId(shapes, shapeId);
   const variant = shape.variants?.[mainFlowerId];
-  const spinCfg = shape.ready ? shape.spins?.[mainFlowerId] : null;
+  const spinCfg = shape.spins?.[mainFlowerId] || defaultSpin || null;
   const src = spinCfg ? `spin:${spinCfg.dir}` : withBase(shape.ready ? variant || shape.model : fallback);
   if (currentSrc === src) return false;
   currentSrc = src;
