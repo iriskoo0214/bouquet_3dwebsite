@@ -53,7 +53,10 @@
       "description": "초승달처럼 한쪽 또는 양쪽으로 휘어지는",
       "model": "/models/shapes/crescent.glb",
       "orientation": "0deg 0deg -90deg",
-      "ready": true
+      "ready": true,
+      "variants": {
+        "ranunculus-pink": "/models/shapes/crescent__ranunculus-pink.glb"
+      }
     }
   ],
   "_note": "모양은 4종: 라운드·내추럴·캐스케이드·크레센트 (2026-11-18 확정). 모델이 없는 모양은 fallback(내추럴)을 보여준다. orientation = model-viewer orientation(roll pitch yaw)."

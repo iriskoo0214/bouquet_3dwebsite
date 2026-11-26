@@ -33,6 +33,9 @@ const LIGHTING = [
 const BASE = import.meta.env.BASE_URL;
 const withBase = (p) => BASE + p.replace(/^\//, '');
 const ICON = withBase('/assets/figma/');
+// 스튜디오 조명: 왼쪽 위 따뜻한 키라이트 + 뒤쪽 차가운 백라이트 + 하늘·땅 반사광을 구운 HDR
+// (tools/studio_env.py로 만든다. 경로에 배포 base가 붙어야 해서 HTML이 아니라 여기서 지정)
+const STUDIO_ENV = withBase('/env/studio.hdr');
 
 const VIEWS = {
   front: '0deg 80deg auto',
@@ -94,6 +97,7 @@ function estimate(s) {
 
 /* ───────── 3D 뷰어 ───────── */
 const viewer = $('#viewer');
+viewer.environmentImage = STUDIO_ENV;
 const loading = $('#loading');
 const loadingBar = $('#loading-bar');
 const loadingText = $('#loading-text');

@@ -210,11 +210,18 @@ soft even studio lighting, no shadows, photorealistic product photo.
 - 등록: `shapes.json`의 해당 모양에 `"variants": { "<꽃 id>": "/models/shapes/<파일>" }` 한 줄 추가
 - 만드는 흐름 (Figma Weave): 원본 이미지(모양) + `flower types`(꽃 이름) → Seedream A 꽃 교체 → Seedream B 리본(`ribbon finish-<모양>`) → Tripo H3.1(Face Limit 100000, PBR·Texture 켬) → GLB 다운로드
 - 받은 뒤: 노멀·금속성 텍스처를 빼고 색 텍스처를 2048px JPEG로 줄여 5MB 이하로 맞춘다 (round.glb와 같은 방식)
-- 손잡이 마감: 라운드 = 흰 새틴 교차 감기 + 진주 핀 2개 / 크레센트 = 가운데에 짧게 감아 꽃 아래로 숨김, 핀 없음 / 내추럴·캐스케이드 = 미정
+- 손잡이 마감: 라운드 = 흰 새틴 교차 감기 + 진주 핀 2개 / 크레센트 = 가운데에 짧게 감아 꽃 아래로 숨김, 핀 없음 / 내추럴 = 비치는 흰 오간자 리본으로 줄기를 성기게 나선형으로 감고, 아래 줄기는 드러나게, 리본 끝을 길게 물결치며 늘어뜨림 (2026-11-24 확정) / 캐스케이드 = 미정
 
 | 모양 | 꽃 | 파일 | 상태 |
 |---|---|---|---|
 | round | tulip-white | `round__tulip-white.glb` (3.3MB · 9.4만 tri) | ✓ Weave Tripo H3.1 (2026-11-19) |
+| crescent | ranunculus-pink | `crescent__ranunculus-pink.glb` (3.6MB · 9.8만 tri) | ✓ Weave C단계 → Tripo H3.1, 생화 재질 (2026-11-23) |
+
+### 생화 재질 만들기 · 2026-11-23
+Tripo GLB는 거칠기 맵이 군데군데 낮아(반들거림) 꽃이 플라스틱처럼 보이고, 꽃잎이 한 면만 그려진다. 아래 스크립트로 바꾼다.
+- `python tools/live_petal.py <Tripo.glb> public/models/shapes/<모양>__<꽃>.glb [거칠기=0.85] [sheen=0.5]` (Pillow 필요)
+- 색 텍스처만 2048px JPEG로 남기고, 금속성 0 · 거칠기 0.85 · 양면 · sheen(꽃잎 벨벳 광, 꽃 색) · specular 0.35
+- material 이름이 `live_petal`이면 사이트의 왁스 설정(SOFT_LOOK)을 건너뛴다
 
 ## 준비 후 확인할 것
 - [ ] 6개 파일이 `public/models/shapes/`에 있다
