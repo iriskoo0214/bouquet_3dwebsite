@@ -113,7 +113,12 @@
           <span class="tb-divider" aria-hidden="true"></span>
           <button class="tb-hand" data-action="hand" aria-pressed="false">
             HAND
-            <span class="eye"><img src="/assets/figma/eye.svg" width="17" height="13" alt="" /></span>
+            <!-- Figma eye 아이콘을 선으로 그리고 빗금을 더했다. 끄면 빗금이 그어지고 눈동자가 작아진다 -->
+            <span class="eye" aria-hidden="true"><svg viewBox="0 0 17.2667 12.7667">
+              <path d="M0.8 6.38333C2.63333 2.71667 5.38333 0.8 8.63333 0.8C11.8833 0.8 14.6333 2.71667 16.4667 6.38333C14.6333 10.05 11.8833 11.9667 8.63333 11.9667C5.38333 11.9667 2.63333 10.05 0.8 6.38333Z"/>
+              <circle class="eye-pupil" cx="8.63333" cy="6.38333" r="2.58333"/>
+              <path class="eye-slash" d="M2.4 0.4L14.9 12.4" pathLength="1"/>
+            </svg></span>
           </button>
         </div>
 

@@ -696,6 +696,7 @@ function renderShapes(s) {
     b.innerHTML = sh.label + (sh.ready ? '' : '<span class="tag">준비 중</span>');
     b.title = sh.description;
     radio(b, s.shape === sh.id);
+    fillBox(`shape:${sh.id}`, b, s.shape === sh.id, 'opt');
     b.onclick = () => s.shape !== sh.id && commit({ shape: sh.id });
     box.append(b);
   });
@@ -709,6 +710,7 @@ function renderSizes(s) {
     b.className = 'opt';
     b.innerHTML = `${sz.label}<small>${sz.stems}</small>`;
     radio(b, s.size === id);
+    fillBox(`size:${id}`, b, s.size === id, 'opt');
     b.onclick = () => s.size !== id && commit({ size: id });
     box.append(b);
   });
@@ -752,7 +754,9 @@ function renderFlowers(boxId, list, colour, selected, listKey) {
         <span class="flower-thumb"><img src="${ICON}flower-thumb.png" width="24" height="24" alt="" /></span>
         <span class="flower-text"><span class="name">${f.name}</span><span class="meta">${f.available ? `1송이 ${won(f.price)}부터~` : '판매 시즌이 아니에요'}</span></span>
       </span>
-      <span class="check" aria-hidden="true"><img src="${ICON}check.svg" width="18" height="18" alt="" /></span>`;
+      <span class="check" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M3 8.59L7.97 13.5L15 4.5" pathLength="1"/></svg></span>`;
+    drawCheck(`${listKey}:${f.id}`, b.querySelector('.check path'), selected.includes(f.id));
+    fillBox(`${listKey}:${f.id}`, b.querySelector('.check'), selected.includes(f.id), 'check');
     b.onclick = () => {
       const on = selected.includes(f.id);
       if (on && selected.length === 1) return toast('꽃은 1종 이상 골라 주세요');
@@ -761,6 +765,60 @@ function renderFlowers(boxId, list, colour, selected, listKey) {
     };
     box.append(b);
   });
+}
+
+/* 체크 표시가 스스로 그려진다 — designbookmark 'Checkbox list'의 체크 모션 (스프링 160 · 20).
+   체크하면 0.08초 뒤 선이 왼쪽부터 그려지고, 해제하면 거꾸로 지워진다.
+   목록은 고를 때마다 새로 그려서, 꽃마다 스프링을 따로 보관해 이어서 움직인다 */
+const checkMarks = new Map(); // 'main:juliet' → { s, on, path, timer }
+function drawCheck(key, path, on) {
+  let m = checkMarks.get(key);
+  if (!m) {
+    m = { s: Springs.S(on ? 1 : 0, 160, 20), on };
+    checkMarks.set(key, m);
+  }
+  m.path = path;
+  if (m.on !== on) {
+    m.on = on;
+    clearTimeout(m.timer);
+    if (on) m.timer = setTimeout(() => { if (m.on) { m.s.t = 1; Springs.kick(); } }, 80);
+    else { m.s.t = 0; Springs.kick(); }
+  }
+  path.style.strokeDashoffset = (1 - clamp01(m.s.x)).toFixed(3);
+}
+
+/* 고르면 상자가 검게 차오른다 — designbookmark 'Checkbox list'의 채우기 모션 (스프링 300 · 24, 원본 값).
+   원본의 크기가 톡 튀는 효과는 쓰지 않는다.
+   움직이는 동안만 인라인 색을 쓰고, 멈추면 지워서 CSS(hover 등)가 그대로 적용된다 */
+const boxFills = new Map();
+const FILL_KIND = {
+  check: { border: ['--color-bg-inverse', '--color-border-default'], text: null },
+  opt: { border: ['--color-border-strong', '--color-border-default'], text: ['--color-text-on-inverse', '--color-text-primary'] },
+};
+function fillBox(key, el, on, kind) {
+  let m = boxFills.get(key);
+  if (!m) {
+    m = { f: Springs.S(on ? 1 : 0, 300, 24), on, kind: FILL_KIND[kind] };
+    boxFills.set(key, m);
+  }
+  m.el = el;
+  if (m.on !== on) {
+    m.on = on;
+    m.f.t = on ? 1 : 0;
+    Springs.kick();
+  }
+  paintFill(m);
+}
+function paintFill(m) {
+  const el = m.el;
+  if (!el?.isConnected) return;
+  const settled = Math.abs(m.f.x - m.f.t) < 1e-3 && Math.abs(m.f.v) < 1e-2;
+  if (settled) { el.style.background = el.style.borderColor = el.style.color = ''; return; }
+  const pct = (clamp01(m.f.x) * 100).toFixed(1);
+  const mix = ([a, b]) => `color-mix(in srgb, var(${a}) ${pct}%, var(${b}))`;
+  el.style.background = `color-mix(in srgb, var(--color-bg-inverse) ${pct}%, transparent)`;
+  el.style.borderColor = mix(m.kind.border);
+  if (m.kind.text) el.style.color = mix(m.kind.text);
 }
 
 function flowerSummary(s) {
@@ -779,6 +837,7 @@ function renderLighting(s) {
     b.className = 'opt';
     b.textContent = l.label;
     radio(b, s.lighting === l.id);
+    fillBox(`light:${l.id}`, b, s.lighting === l.id, 'opt');
     b.onclick = () => s.lighting !== l.id && commit({ lighting: l.id });
     box.append(b);
   });
@@ -956,7 +1015,7 @@ function renderEstimate() {
   } else if (n > 0) {
     btn.dataset.action = 'apply';
     // Figma 285:1802: 아이콘 없이 글자 + 배지
-    btn.innerHTML = `APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
+    setApplyLabel(btn, n, true);
     btn.setAttribute('aria-label', `변경사항 ${n}개 적용하기`);
     renderPanelApply(n);
     return;
@@ -972,8 +1031,56 @@ function renderEstimate() {
 function renderPanelApply(n) {
   const b = $('#panel-apply');
   b.hidden = n === 0 || applyPhase !== null;
-  b.innerHTML = `APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
+  if (b.hidden) b.textContent = ''; // 다시 나타날 때 0에서 시작하도록 비운다
+  else setApplyLabel(b, n, true);
   b.setAttribute('aria-label', `변경사항 ${n}개 적용하고 3D로 보기`);
+}
+
+/* APPLY CHANGES 옆 숫자가 바뀔 때 굴러가듯 바뀐다 — Kokonut UI 'Cart button'의 RollingText와 같은 움직임
+   (MIT, kokonutui.com). 자리마다 따로 움직이고, 늘면 새 숫자가 아래 12px에서 올라오며 옛 숫자는 위로 빠진다
+   (줄면 반대). 0.24초, ease-out cubic-bezier(0.23, 1, 0.32, 1). 움직임 줄이기 설정이면 바로 바뀐다 */
+const ROLL_EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+function setApplyLabel(btn, n, animate) {
+  let rolls = btn.querySelector('.badge .rolls');
+  if (!rolls) {
+    // 버튼이 막 APPLY CHANGES로 바뀐 때도 0에서 굴러 올라온다
+    btn.innerHTML = 'APPLY CHANGES<span class="badge" aria-hidden="true"><span class="rolls"></span></span>';
+    rolls = btn.querySelector('.badge .rolls');
+    rollNumber(rolls, 0, false);
+    animate = true;
+  }
+  rollNumber(rolls, n, animate && !reduceMotion.matches);
+}
+function rollNumber(box, n, animate) {
+  const prev = Number(box.dataset.n ?? n);
+  const dir = n >= prev ? 1 : -1;
+  box.dataset.n = n;
+  const text = String(n);
+  const slots = new Map([...box.children].map((s) => [Number(s.dataset.place), s]));
+  for (let i = 0; i < text.length; i++) {
+    const place = text.length - i; // 오른쪽부터 센 자리
+    let slot = slots.get(place);
+    slots.delete(place);
+    if (!slot) { slot = document.createElement('span'); slot.className = 'roll'; slot.dataset.place = place; }
+    box.append(slot); // 순서 맞추기
+    const cur = slot.querySelector(':scope > span:not(.out)');
+    if (cur && cur.textContent === text[i]) continue;
+    const next = document.createElement('span');
+    next.textContent = text[i];
+    slot.append(next);
+    if (cur) {
+      cur.classList.add('out');
+      if (animate) {
+        cur.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${-12 * dir}px)`, opacity: 0 }],
+          { duration: 240, easing: ROLL_EASE, fill: 'forwards' }).finished.then(() => cur.remove(), () => cur.remove());
+      } else cur.remove();
+    }
+    if (animate && cur) {
+      next.animate([{ transform: `translateY(${12 * dir}px)`, opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+        { duration: 240, easing: ROLL_EASE });
+    }
+  }
+  slots.forEach((s) => s.remove()); // 줄어든 자리
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
@@ -1060,7 +1167,7 @@ document.addEventListener('click', (e) => {
     case 'redo': return redo();
     case 'rotate-left': return rotateBy(-90);
     case 'rotate-right': return rotateBy(90);
-    case 'hand': return toast('손에 든 모습은 손 모델을 준비하고 있어요');
+    case 'hand': return toggleHand();
     case 'ask': return toast('플로리스트에게 보내기는 다음 단계에서 연결돼요');
     case 'apply': return applyChanges();
     case 'panel-apply': togglePanel(false); return applyChanges(); // 패널을 닫고 3D에서 적용되는 걸 보여 준다
@@ -1102,7 +1209,11 @@ const Springs = (() => {
   const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } };
   return { S, kick, onRender: (r) => renders.push(r) };
 })();
-const clamp01 = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+function clamp01(v, lo = 0, hi = 1) { return Math.max(lo, Math.min(hi, v)); }
+Springs.onRender(() => {
+  checkMarks.forEach((m) => { if (m.path?.isConnected) m.path.style.strokeDashoffset = (1 - clamp01(m.s.x)).toFixed(3); });
+  boxFills.forEach(paintFill);
+});
 
 const menuUI = (() => {
   const gnb = $('#gnb');
@@ -1152,6 +1263,28 @@ const menuUI = (() => {
   if (compact.matches) Springs.kick();
   return { set };
 })();
+
+/* HAND 토글의 눈 아이콘 — designbookmark 'Password strength'의 눈 모션 (스프링 300 · 24).
+   켜면 빗금이 지워지며 눈동자가 커지고, 끄면 빗금이 그어지며 눈동자가 반으로 줄어든다 */
+const handEye = (() => {
+  const btn = document.querySelector('.tb-hand');
+  const slash = btn.querySelector('.eye-slash');
+  const pupil = btn.querySelector('.eye-pupil');
+  const E = Springs.S(0, 300, 24);
+  Springs.onRender(() => {
+    const e = clamp01(E.x);
+    slash.style.strokeDashoffset = e.toFixed(3);
+    pupil.style.transform = `scale(${(0.5 + 0.5 * e).toFixed(3)})`;
+  });
+  return { set(on) { E.t = on ? 1 : 0; Springs.kick(); } };
+})();
+function toggleHand() {
+  const btn = $('[data-action="hand"]');
+  const on = btn.getAttribute('aria-pressed') !== 'true';
+  btn.setAttribute('aria-pressed', String(on));
+  handEye.set(on);
+  if (on) toast('손에 든 모습은 손 모델을 준비하고 있어요');
+}
 
 function toggleMenu(force) {
   const gnb = $('#gnb');

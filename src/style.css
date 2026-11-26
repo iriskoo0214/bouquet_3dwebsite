@@ -220,7 +220,10 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 .tb-view[aria-pressed="true"] { color: var(--color-text-strong); }
 .tb-hand { white-space: nowrap; flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px 6px 14px; border-radius: var(--radius-default); font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--color-text-strong); }
 .tb-hand .eye { width: 20px; height: 20px; display: grid; place-items: center; }
-.tb-hand .eye img { width: 17.27px; height: 12.77px; }
+.tb-hand .eye svg { width: 17.27px; height: 12.77px; overflow: visible; fill: none; stroke: var(--color-text-strong); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+/* 빗금·눈동자는 main.js의 스프링이 움직인다. 처음(손 모델 꺼짐)은 빗금이 그어진 상태 */
+.tb-hand .eye-slash { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.tb-hand .eye-pupil { transform-origin: 8.63333px 6.38333px; transform: scale(.5); }
 
 /* 로딩 · 오류 · 토스트 */
 .state-loading, .state-error { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; display: grid; place-content: center; text-align: center; pointer-events: none; }
@@ -346,9 +349,9 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 .flower-text .name { font-size: 13px; font-weight: 600; }
 .flower-text .meta { font-size: 12px; font-weight: 400; }
 .check { width: 28px; height: 28px; border-radius: var(--radius-default); border: 1px solid var(--color-border-default); display: grid; place-items: center; flex: none; }
-.check img { width: 18px; height: 18px; visibility: hidden; }
+.check svg { width: 18px; height: 18px; fill: none; stroke: var(--color-bg-swatch); stroke-width: 1.2; stroke-linecap: butt; stroke-linejoin: miter; stroke-dasharray: 1; visibility: hidden; }
 .flower[aria-checked="true"] .check { background: var(--color-bg-inverse); border-color: var(--color-bg-inverse); }
-.flower[aria-checked="true"] .check img { visibility: visible; }
+.flower[aria-checked="true"] .check svg { visibility: visible; }
 .empty { border: 1px dashed var(--color-border-default); border-radius: var(--radius-default); padding: 20px; text-align: center; margin: 24px; }
 .empty .help-sm { margin-top: 6px; }
 .flower-list .empty { margin: 0; }
@@ -395,9 +398,14 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 .btn-primary:disabled:hover { background: var(--color-bg-inverse); }
 /* 남은 변경 개수 배지 (Badge / 변경 개수) */
 .badge {
-  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; overflow: hidden;
   background: var(--color-text-on-inverse); color: var(--color-text-strong); font-size: 12px; font-weight: 600; line-height: 1;
 }
+/* 굴러가는 숫자 (setApplyLabel): 빠지는 숫자는 자리를 차지하지 않는다 */
+.rolls { display: inline-flex; font-variant-numeric: tabular-nums; }
+.roll { position: relative; display: inline-block; }
+.roll > span { display: inline-block; }
+.roll > span.out { position: absolute; left: 0; top: 0; }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
