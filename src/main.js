@@ -502,70 +502,7 @@ function tiltTo(to, done) {
   });
 })();
 
-/* 커서 따라 보기 (참고: threeui Saltmere): 마우스를 올리면 자동 회전을 멈추고
-   부케가 커서 쪽으로 실제로 돌아본다 — 좌우 = 회전 영상 프레임(±FOLLOW_DEG)
-   위에서 보기는 위로 끌기가 맡으니 마우스만 올렸을 때 기울이지는 않는다
-   마우스가 나가면 자동 회전을 이어 간다. 끄는 동안은 끄는 대로 돈다 */
-(() => {
-  const FOLLOW_DEG = 40; // 커서를 끝까지 옮기면 돌아보는 각도
-  const EASE = 0.1;
-  let raf = 0;
-  let on = false; // 커서가 회전 영역 위에 있나
-  let base = null; // 커서 가운데일 때의 프레임 위치 (끌면 다시 잡는다)
-  let tgt = { nx: 0, ny: 0 };
-  const cur = { nx: 0, ny: 0, pos: 0 };
-  const follow = () => (spin ? (FOLLOW_DEG / 360) * spin.frames.length : 0);
-  const loop = () => {
-    cur.nx += (tgt.nx - cur.nx) * EASE;
-    cur.ny += (tgt.ny - cur.ny) * EASE;
-    let moving = Math.abs(tgt.nx - cur.nx) + Math.abs(tgt.ny - cur.ny) > 0.002;
-    if (on && base !== null && spin && !spinBox.classList.contains('dragging') && !tiltT && !tiltRaf) {
-      const want = base + cur.nx * follow();
-      cur.pos += (want - cur.pos) * EASE;
-      showFrame(cur.pos);
-      if (Math.abs(want - cur.pos) > 0.05) moving = true;
-    }
-    raf = moving ? requestAnimationFrame(loop) : 0;
-  };
-  const kick = () => {
-    if (!raf) raf = requestAnimationFrame(loop);
-  };
-  const norm = (e) => {
-    const r = spinBox.getBoundingClientRect();
-    return {
-      nx: Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)),
-      ny: Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)),
-    };
-  };
-  spinBox.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse' || !spin || reduceMotion.matches) return;
-    if (spinBox.classList.contains('dragging')) {
-      base = null; // 끄는 동안은 끄는 대로. 놓은 뒤 다시 잡는다
-      tgt = { nx: 0, ny: 0 };
-      return kick();
-    }
-    const n = norm(e);
-    on = true;
-    if (base === null && !inertiaRaf) {
-      // 지금 각도에서 시작 (놓은 뒤 관성이 끝난 다음): 커서 위치만큼 튀지 않게 기준을 거꾸로 잡는다
-      cur.pos = spin.pos;
-      cur.nx = n.nx;
-      base = spin.pos - n.nx * follow();
-    }
-    autoHoldUntil = Infinity; // 커서가 있는 동안 자동 회전은 쉰다
-    tgt = n;
-    kick();
-  });
-  spinBox.addEventListener('pointerleave', () => {
-    on = false;
-    base = null;
-    tgt = { nx: 0, ny: 0 };
-    if (!spinBox.classList.contains('dragging')) autoHoldUntil = 0;
-    kick();
-  });
-})();
-
-
+/* 마우스를 올려도 자동 회전은 멈추지 않는다 (예전 '커서 따라 보기'는 뺐다). 끌면 끄는 대로 돈다 */
 
 $('#retry').addEventListener('click', () => {
   const src = currentSrc;
