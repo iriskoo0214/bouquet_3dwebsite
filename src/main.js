@@ -1,7 +1,7 @@
 import '@google/model-viewer';
 import shapesData from './data/shapes.json';
 import flowersData from './data/flowers.json';
-import { analyzeReference } from './analyze.js';
+import { analyzeReference, checkFlowerPhoto, warmUpFlowerCheck } from './analyze.js';
 
 /* ───────── 데이터 ───────── */
 const { shapes, sizes, fallback } = shapesData;
@@ -1105,6 +1105,24 @@ function patchFromAnalysis(result) {
   return patch;
 }
 
+const NOT_FLOWER_MSG = '꽃이 보이지 않는 사진이에요. 꽃다발이나 꽃이 잘 보이는 사진을 올려 주세요.';
+
+// 꽃 사진이 아니면 목록에서 빼고 업로드 칸 아래에 알려 준다. 꽃 사진이면 true
+async function keepIfFlower(r, file) {
+  r.status = 'analyzing';
+  renderRefs();
+  const { flower } = await checkFlowerPhoto(file);
+  if (flower) return true;
+  refs = refs.filter((x) => x !== r);
+  URL.revokeObjectURL(r.url);
+  renderRefs();
+  updateClear();
+  const err = $('#ref-error');
+  err.textContent = NOT_FLOWER_MSG;
+  err.hidden = false;
+  return false;
+}
+
 async function autofillFromReference(r, file) {
   r.status = 'analyzing';
   renderRefs();
@@ -1140,13 +1158,23 @@ $('#ref-input').addEventListener('change', (e) => {
     if (f.size > MAX_REF_MB * 1024 * 1024) { err.textContent = `${MAX_REF_MB}MB가 넘는 사진은 올릴 수 없어요. JPG · PNG · HEIC 사진을 골라 주세요.`; err.hidden = false; continue; }
     const r = { id: crypto.randomUUID(), url: URL.createObjectURL(f), status: 'uploading' };
     refs.push(r);
-    // 한 번에 여러 장을 올리면 첫 장으로 채운다
-    if (!first) { first = r; setTimeout(() => autofillFromReference(r, f), 700); }
-    else setTimeout(() => { r.status = 'done'; renderRefs(); }, 700);
+    // 꽃 사진인지 먼저 보고, 한 번에 여러 장을 올리면 첫 꽃 사진으로 채운다
+    setTimeout(async () => {
+      if (!(await keepIfFlower(r, f))) return;
+      if (!first) {
+        first = r;
+        autofillFromReference(r, f);
+      } else {
+        r.status = 'done';
+        renderRefs();
+      }
+    }, 700);
   }
   renderRefs();
   updateClear();
 });
+// 사진 올리기 버튼에 손이 가면 꽃 판별 모델을 미리 받아 둔다
+$('#ref-input').closest('section, div')?.addEventListener('pointerenter', warmUpFlowerCheck, { once: true });
 
 // 키보드: ← → 회전
 window.addEventListener('keydown', (e) => {
