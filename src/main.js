@@ -958,12 +958,22 @@ function renderEstimate() {
     // Figma 285:1802: 아이콘 없이 글자 + 배지
     btn.innerHTML = `APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
     btn.setAttribute('aria-label', `변경사항 ${n}개 적용하기`);
+    renderPanelApply(n);
     return;
   } else {
     btn.dataset.action = 'ask';
     btn.textContent = 'ASK TO FLORIST';
   }
   btn.removeAttribute('aria-label');
+  renderPanelApply(n);
+}
+
+// 모바일 패널 아래 APPLY CHANGES (305:444): 적용할 변경이 있을 때만 보인다
+function renderPanelApply(n) {
+  const b = $('#panel-apply');
+  b.hidden = n === 0 || applyPhase !== null;
+  b.innerHTML = `APPLY CHANGES<span class="badge" aria-hidden="true">${n}</span>`;
+  b.setAttribute('aria-label', `변경사항 ${n}개 적용하고 3D로 보기`);
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
@@ -1053,6 +1063,7 @@ document.addEventListener('click', (e) => {
     case 'hand': return toast('손에 든 모습은 손 모델을 준비하고 있어요');
     case 'ask': return toast('플로리스트에게 보내기는 다음 단계에서 연결돼요');
     case 'apply': return applyChanges();
+    case 'panel-apply': togglePanel(false); return applyChanges(); // 패널을 닫고 3D에서 적용되는 걸 보여 준다
     case 'download': return downloadImage();
     case 'clear': return ($('#clear-modal').hidden = false);
     case 'clear-cancel': return ($('#clear-modal').hidden = true);
@@ -1060,11 +1071,96 @@ document.addEventListener('click', (e) => {
   }
 });
 
+/* ───────── 메뉴 (1439px 이하): ☰ 누르면 아래로 펼쳐진다 ─────────
+   designbookmark 'Dynamic menu'(아이콘)와 'Sidebar collapse'(펼침)의 스프링을 그대로 쓴다.
+   Sidebar collapse는 옆으로 펼쳐지지만 여기서는 같은 움직임을 세로로 돌렸다:
+   - 높이: stiffness 260 · damping 24 (원본 너비 스프링)
+   - 메뉴 글자: 300 · 26. 열 때는 0.06초 뒤부터 0.04초 간격으로 차례로, 닫을 때는 한꺼번에
+   - 마우스를 올리면 바탕 없이 글자만 진해진다 (CSS)
+   - ☰ → X: 380 · 24 (Dynamic menu)
+   움직임 줄이기 설정이면 튕김 없이(임계 감쇠) 멈춘다 */
+const Springs = (() => {
+  const list = [];
+  let raf = 0, last = 0;
+  const S = (x, k, c) => {
+    const s = { x, v: 0, t: x, k, c: reduceMotion.matches ? 2 * Math.sqrt(k) : c };
+    list.push(s);
+    return s;
+  };
+  const renders = [];
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 30); last = now;
+    for (let i = 0; i < 4; i++) { // 프레임마다 4번 나눠 계산 (원본 motion.js와 같음)
+      const h = dt / 4;
+      list.forEach((s) => { const a = -s.k * (s.x - s.t) - s.c * s.v; s.v += a * h; s.x += s.v * h; });
+    }
+    const busy = list.some((s) => Math.abs(s.x - s.t) > 1e-3 || Math.abs(s.v) > 1e-2);
+    if (!busy) list.forEach((s) => { s.x = s.t; s.v = 0; });
+    renders.forEach((r) => r());
+    raf = busy ? requestAnimationFrame(frame) : 0;
+  }
+  const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } };
+  return { S, kick, onRender: (r) => renders.push(r) };
+})();
+const clamp01 = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+
+const menuUI = (() => {
+  const gnb = $('#gnb');
+  const nav = $('#gnb-menu');
+  const bars = document.querySelectorAll('.burger i');
+  const links = [...nav.querySelectorAll('a')];
+
+  const compact = matchMedia('(max-width: 1439px)');
+  const X = Springs.S(0, 380, 24);
+  const H = Springs.S(0, 260, 24);
+  const labels = links.map(() => Springs.S(0, 300, 26));
+  let timers = [];
+  const fullHeight = () => nav.scrollHeight + 1; // + 아래 테두리 1px
+
+  function set(open) {
+    timers.forEach(clearTimeout); timers = [];
+    X.t = open ? 1 : 0;
+    H.t = open ? fullHeight() : 0;
+    if (open) {
+      labels.forEach((l, i) => timers.push(setTimeout(() => { l.t = 1; Springs.kick(); }, (0.06 + i * 0.04) * 1000)));
+    } else {
+      labels.forEach((l) => { l.t = 0; });
+    }
+    Springs.kick();
+  }
+
+  Springs.onRender(() => {
+    const x = clamp01(X.x, -0.1, 1.1);
+    bars[0].style.transform = `translateY(${(-4 * (1 - x)).toFixed(2)}px) rotate(${(45 * x).toFixed(2)}deg)`;
+    bars[1].style.transform = `translateY(${(4 * (1 - x)).toFixed(2)}px) rotate(${(-45 * x).toFixed(2)}deg)`;
+    if (!compact.matches) return;
+    const h = Math.max(0, H.x);
+    nav.style.height = h.toFixed(2) + 'px';
+    nav.style.visibility = h < 0.5 && H.t === 0 ? 'hidden' : 'visible';
+    links.forEach((a, i) => {
+      const o = clamp01(labels[i].x);
+      a.style.opacity = o.toFixed(3);
+      a.style.transform = `translateY(${((1 - o) * -10).toFixed(2)}px)`;
+    });
+  });
+
+  // 넓은 화면(1440 이상)에서는 가로 메뉴라 스프링이 손대지 않는다
+  function reset() {
+    [nav, ...links].forEach((el) => el.removeAttribute('style'));
+  }
+  compact.addEventListener('change', () => { reset(); if (compact.matches) Springs.kick(); });
+  if (compact.matches) Springs.kick();
+  return { set };
+})();
+
 function toggleMenu(force) {
   const gnb = $('#gnb');
   const open = force ?? !gnb.classList.contains('menu-open');
   gnb.classList.toggle('menu-open', open);
-  $('[data-action="menu"]').setAttribute('aria-expanded', String(open));
+  const btn = $('[data-action="menu"]');
+  btn.setAttribute('aria-expanded', String(open));
+  btn.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+  menuUI.set(open);
 }
 
 function togglePanel(force) {

@@ -13,7 +13,8 @@
       <div class="gnb-brand">
         <!-- 1439px 이하: 메뉴 아이콘 (244:1885) -->
         <button class="gnb-menu-btn" data-action="menu" aria-label="메뉴 열기" aria-expanded="false" aria-controls="gnb-menu">
-          <img src="/assets/figma/menu.svg" width="24" height="24" alt="" />
+          <!-- 두 줄 메뉴 아이콘. 열면 두 선이 가운데서 만나 X가 된다 -->
+          <span class="burger" aria-hidden="true"><i></i><i></i></span>
         </button>
         <a class="logo" href="#">FLORENCE FLOWER</a>
       </div>
@@ -229,8 +230,11 @@
         </div>
 
 
-        <!-- 모바일: 고른 값 칩 (244:2661) -->
-        <div class="choice-bar" id="choice-bar" aria-label="고른 항목"></div>
+        <!-- 모바일: 고른 값 칩 + 변경사항 적용 (244:2661 · 305:444) -->
+        <div class="panel-foot">
+          <div class="choice-bar" id="choice-bar" aria-label="고른 항목"></div>
+          <button class="btn btn-primary btn-block" id="panel-apply" data-action="panel-apply" hidden></button>
+        </div>
       </aside>
 
       <!-- Panel / 견적 및 내보내기 (240:3071) · 변경 후 상태: Panel / 견적 적용하기 (285:1793) -->

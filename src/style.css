@@ -80,7 +80,11 @@ img { display: block; }
 
 .gnb-brand { display: flex; align-items: center; gap: 18px; }
 .gnb-menu-btn, .panel-btn { display: none; }
-.gnb-menu-btn img { width: 24px; height: 24px; }
+/* 두 줄 → X (선은 Figma menu.svg와 같은 16×1.6, 두 선 간격 8px). 움직임은 main.js의 스프링이 그린다 */
+.burger { position: relative; display: block; width: 24px; height: 24px; }
+.burger i { position: absolute; left: 4px; right: 4px; top: 11.2px; height: 1.6px; background: var(--color-text-strong); will-change: transform, opacity; }
+.burger i:nth-child(1) { transform: translateY(-4px); }
+.burger i:nth-child(2) { transform: translateY(4px); }
 .panel-btn {
   width: 30px; height: 30px; padding: 10px; border: 1px solid var(--color-border-default); border-radius: 1000px;
   align-items: center; justify-content: center; background: var(--color-bg-canvas);
@@ -89,7 +93,7 @@ img { display: block; }
 .panel-btn[aria-expanded="true"] { background: var(--color-bg-inverse); border-color: var(--color-bg-inverse); }
 /* 열렸을 때 (244:2436): 검은 원 + 크림색 X */
 .panel-btn[aria-expanded="true"] img { content: url(/assets/figma/panel-close.svg); }
-.choice-bar { display: none; }
+.panel-foot { display: none; }
 
 /* canvas */
 .canvas {
@@ -416,14 +420,19 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   :root { --panel-w: 360px; }
   .gnb { padding: 12px 24px; position: relative; }
   .gnb-menu-btn { display: block; }
-  /* 메뉴 아이콘을 누르면 펼쳐지는 메뉴 */
+  /* 메뉴 아이콘을 누르면 아래로 펼쳐지는 메뉴. 높이와 글자는 main.js의 스프링이 움직인다 */
   .gnb-menu {
-    display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 30;
-    flex-direction: column; gap: 0; padding: 8px 24px 16px;
+    position: absolute; left: 0; right: 0; top: 100%; z-index: 30;
+    flex-direction: column; gap: 2px; padding: 0 12px; /* 위아래 여백은 첫·끝 메뉴에 줘서 닫으면 높이가 0까지 줄어든다 */
+    height: 0; overflow: hidden; visibility: hidden;
     background: var(--color-bg-canvas); border-bottom: 1px solid var(--color-border-default);
+    box-sizing: border-box;
   }
-  .gnb-menu a { padding: 10px 0; font-size: 14px; }
-  .gnb.menu-open .gnb-menu { display: flex; }
+  .gnb-menu a { position: relative; z-index: 1; padding: 10px 12px; font-size: 14px; opacity: 0; will-change: transform, opacity; }
+  .gnb-menu a { transition: color .2s; }
+  .gnb-menu a:hover, .gnb-menu a:focus-visible { color: var(--color-text-primary); } /* 바탕 없이 글자만 진해진다 */
+  .gnb-menu a:first-of-type { margin-top: 8px; }
+  .gnb-menu a:last-of-type { margin-bottom: 12px; }
 
   model-viewer, .spin-view, .state-loading, .state-error { bottom: 100px; }
   .toolbar { bottom: 38px; }
@@ -482,12 +491,13 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   .panel.open { transform: none; visibility: visible; transition: transform .35s cubic-bezier(.32, .72, 0, 1); }
   body.panel-open { overflow: hidden; }
 
-  /* 고른 값 칩 줄 (244:2661) */
+  /* 패널 아래: 고른 값 칩 줄 + APPLY CHANGES (244:2661) */
+  .panel-foot { display: flex; flex-direction: column; gap: 14px; flex: none; padding: 20px 24px; background: var(--color-bg-surface); }
   .choice-bar {
-    display: flex; gap: 10px; flex: none; padding: 12px 24px; overflow-x: auto;
-    border-top: 1px solid var(--color-border-default); background: var(--color-bg-canvas);
+    display: flex; gap: 10px; margin: 0 -24px; padding: 0 24px; overflow-x: auto;
     scrollbar-width: none;
   }
+  .panel-foot .btn-primary { padding: 10px 16px; }
   .choice-bar::-webkit-scrollbar { display: none; }
   .choice {
     display: inline-flex; align-items: center; gap: 6px; flex: none;
