@@ -101,17 +101,34 @@ let currentView = 'front';
 
 // 모양별 기본 모델에, 첫 번째 메인 꽃 전용 모델(variants)이 있으면 그걸 쓴다
 // 모델이 바뀌면 true를 돌려준다
+// 실사 회전 영상(spins)이 있는 조합은 3D 대신 회전 프레임을 보여 준다
 function loadModel(shapeId, mainFlowerId) {
   const shape = byId(shapes, shapeId);
   const variant = shape.variants?.[mainFlowerId];
-  const src = withBase(shape.ready ? variant || shape.model : fallback);
+  const spinCfg = shape.ready ? shape.spins?.[mainFlowerId] : null;
+  const src = spinCfg ? `spin:${spinCfg.dir}` : withBase(shape.ready ? variant || shape.model : fallback);
   if (currentSrc === src) return false;
   currentSrc = src;
   loadError.hidden = true;
   loading.classList.remove('done');
   loadingBar.style.width = '0%';
   loadingText.textContent = '부케를 불러오고 있어요 · 0%';
+  if (spinCfg) {
+    viewer.style.visibility = 'hidden';
+    loadSpin(spinCfg);
+    return true;
+  }
+  hideSpin();
+  viewer.style.visibility = '';
   viewer.orientation = shape.ready ? shape.orientation : '0deg 0deg 0deg';
+  // 회전 시안을 보기 전과 같은 모델로 돌아오면 load가 다시 오지 않으니 바로 마무리한다
+  if (viewer.src === src && viewer.loaded) {
+    loading.classList.add('done');
+    applySize(true);
+    setView(currentView || 'front', true);
+    captureThumb();
+    return true;
+  }
   viewer.src = src;
   if (!shape.ready) toast('이 모양은 3D를 준비하고 있어요. 지금은 내추럴로 보여드려요');
   return true;
@@ -130,6 +147,8 @@ const SOFT_LOOK = { roughness: 0.6, glow: 0.08 };
 
 function applySoftLook() {
   for (const m of viewer.model?.materials ?? []) {
+    // 생화 재질을 GLB에 직접 넣은 모델(material 이름 live_*)은 그 설정을 그대로 쓴다
+    if (m.name?.startsWith('live_')) continue;
     const pbr = m.pbrMetallicRoughness;
     pbr.setMetallicFactor(0);
     pbr.setRoughnessFactor(SOFT_LOOK.roughness);
@@ -163,8 +182,370 @@ viewer.addEventListener('error', () => {
   loading.classList.add('done');
   loadError.hidden = false;
 });
+/* ───────── 실사 회전 시안 (회전 영상 프레임) ───────── */
+const spinBox = $('#spin');
+const spinImg = $('#spin-img');
+let spin = null; // { cfg, frames: [url], ready: [bool], keep: [Image], i, pos }
+let spinToken = 0;
+
+const spinActive = () => !!spin && !spinBox.hidden;
+const spinUrl = (cfg, k) => withBase(`${cfg.dir}/${String(k).padStart(3, '0')}.webp`);
+
+function hideSpin() {
+  spinToken++;
+  stopInertia();
+  stopAutoplay();
+  spin = null;
+  spinBox.hidden = true;
+  $('#canvas').classList.remove('plain');
+  $('#canvas').style.removeProperty('--spin-bg');
+  spinBox.classList.remove('blend');
+}
+
+/* 자동 회전: 영상처럼 계속 한 바퀴씩 돌고(무한 반복), 끌거나 버튼을 누르면 잠시 멈췄다가 다시 돈다
+   cfg.autoplay = 한 바퀴에 걸리는 초 (원본 영상 속도) */
+let autoRaf = 0;
+let autoLast = 0;
+let autoHoldUntil = 0;
+const AUTO_RESUME_MS = 1500; // 손을 놓은 뒤 다시 돌기까지
+function holdAutoplay(ms = AUTO_RESUME_MS) {
+  autoHoldUntil = performance.now() + ms;
+}
+function stopAutoplay() {
+  if (autoRaf) cancelAnimationFrame(autoRaf);
+  autoRaf = 0;
+}
+function startAutoplay() {
+  stopAutoplay();
+  if (!spin?.cfg.autoplay) return;
+  autoLast = performance.now();
+  const tick = (now) => {
+    if (!spin?.cfg.autoplay) return (autoRaf = 0);
+    const dt = Math.min(now - autoLast, 50);
+    autoLast = now;
+    const busy = spinBox.classList.contains('dragging') || inertiaRaf || now < autoHoldUntil || reduceMotion.matches;
+    if (!busy) showFrame(spin.pos + (dt / (spin.cfg.autoplay * 1000)) * spin.frames.length);
+    autoRaf = requestAnimationFrame(tick);
+  };
+  autoRaf = requestAnimationFrame(tick);
+}
+
+// 한 바퀴를 고르게 채우는 순서: 0, n/2, n/4, 3n/4, … (반씩 쪼개기)
+// 뒤쪽 프레임이 늦게 와도 끌 때 가까운 프레임으로 대신 보여 줄 수 있다
+function coverOrder(n) {
+  const order = [];
+  const seen = new Set();
+  for (let step = n; step >= 1; step = Math.floor(step / 2)) {
+    for (let k = 0; k < n; k += step) if (!seen.has(k)) { seen.add(k); order.push(k); }
+    if (step === 1) break;
+  }
+  return order;
+}
+
+function fetchFrame(url) {
+  return new Promise((ok, fail) => {
+    const im = new Image();
+    im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => ok(im));
+    im.onerror = fail;
+    im.src = url;
+  });
+}
+
+async function loadSpin(cfg) {
+  const token = ++spinToken;
+  const urls = Array.from({ length: cfg.frames }, (_, k) => spinUrl(cfg, k));
+  const state = { cfg, frames: urls, ready: urls.map(() => false), keep: [], i: 0, pos: 0 };
+  // 첫 프레임만 오면 바로 보여 주고, 나머지는 보여 주는 동안 받는다
+  const start = currentView === 'back' ? Math.floor(urls.length / 2) : 0;
+  try {
+    state.keep[start] = await fetchFrame(urls[start]);
+    state.ready[start] = true;
+  } catch {
+    if (token !== spinToken) return;
+    loading.classList.add('done');
+    loadError.hidden = false;
+    return;
+  }
+  if (token !== spinToken) return;
+  spin = state;
+  // plain: Figma 시안(301:177)처럼 흰 바탕 (배경 사진·조명 톤·그림자 없이)
+  $('#canvas').classList.toggle('plain', !!cfg.plain);
+  // bg: 바탕을 영상 배경색과 같게 (영상 가장자리에서 잰 색)
+  $('#canvas').style.setProperty('--spin-bg', cfg.bg || '#fff');
+  // blend: 누끼 없이 영상 배경째 보여 주되, 가장자리를 흰 바탕에 녹여 네모가 안 보이게
+  spinBox.classList.toggle('blend', !!cfg.blend);
+  spinBox.hidden = false;
+  loading.classList.add('done');
+  applySize();
+  setView(currentView && currentView !== 'top' && currentView !== 'bottom' ? currentView : 'front');
+  captureThumb();
+  autoHoldUntil = 0;
+  startAutoplay();
+
+  // 나머지 프레임: 한 바퀴를 고르게 덮는 순서로, 동시에 몇 장씩
+  const queue = coverOrder(urls.length).filter((k) => k !== start);
+  const worker = async () => {
+    while (queue.length && token === spinToken) {
+      const k = queue.shift();
+      try {
+        state.keep[k] = await fetchFrame(urls[k]);
+        state.ready[k] = true;
+      } catch { /* 빠진 프레임은 이웃 프레임으로 대신 보여 준다 */ }
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+
+  // 위에서 보기(상하 영상) 프레임: 정면(0) → 가장 위(끝). 회전 프레임을 다 받은 뒤 받는다
+  if (cfg.tilt && token === spinToken) {
+    const t = cfg.tilt;
+    const turls = Array.from({ length: t.frames }, (_, k) => withBase(`${t.dir}/${String(k).padStart(3, '0')}.webp`));
+    state.tilt = { frames: turls, ready: turls.map(() => false), keep: [] };
+    const tq = coverOrder(turls.length);
+    const tw = async () => {
+      while (tq.length && token === spinToken) {
+        const k = tq.shift();
+        try {
+          state.tilt.keep[k] = await fetchFrame(turls[k]);
+          state.tilt.ready[k] = true;
+        } catch { /* 이웃 프레임으로 대신 */ }
+      }
+    };
+    await Promise.all(Array.from({ length: 4 }, tw));
+  }
+}
+
+// 위에서 보기: t = 0(정면) ~ 1(가장 위). 받은 프레임 중 가장 가까운 걸 보여 준다
+function showTilt(t) {
+  const tl = spin?.tilt;
+  if (!tl) return;
+  const n = tl.frames.length;
+  const want = Math.round(Math.max(0, Math.min(1, t)) * (n - 1));
+  let k = -1;
+  for (let d = 0; d < n && k < 0; d++) {
+    if (tl.ready[want - d]) k = want - d;
+    else if (tl.ready[want + d]) k = want + d;
+  }
+  if (k < 0) return;
+  spin.pos = 0; // 상하 영상은 정면에서 찍었다 → 놓으면 정면에서 이어 돈다
+  spin.i = -1; // 다음 showFrame이 회전 프레임으로 꼭 돌아오게
+  spinImg.src = tl.frames[k];
+}
+
+// 아직 안 온 프레임이면 가장 가까운 받은 프레임을 보여 준다
+function nearestReady(k) {
+  const { ready } = spin;
+  const n = ready.length;
+  for (let d = 0; d <= n / 2; d++) {
+    if (ready[(k + d) % n]) return (k + d) % n;
+    if (ready[(k - d + n) % n]) return (k - d + n) % n;
+  }
+  return spin.i;
+}
+
+function showFrame(i) {
+  const n = spin.frames.length;
+  spin.pos = ((i % n) + n) % n;
+  const k = nearestReady(Math.round(spin.pos) % n);
+  if (k === spin.i && spinImg.getAttribute('src') === spin.frames[k]) return;
+  spin.i = k;
+  spinImg.src = spin.frames[k];
+}
+
+/* 손을 놓으면 끌던 속도로 조금 더 돌다가 멈춘다 (관성) */
+let inertiaRaf = 0;
+function stopInertia() {
+  if (inertiaRaf) cancelAnimationFrame(inertiaRaf);
+  inertiaRaf = 0;
+}
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const INERTIA = { minSpeed: 0.004, maxSpeed: 0.12, halfLife: 260 }; // 프레임/ms, ms
+
+function startInertia(v) {
+  stopInertia();
+  if (reduceMotion.matches || Math.abs(v) < INERTIA.minSpeed * 3) return captureThumb();
+  v = Math.max(-INERTIA.maxSpeed, Math.min(INERTIA.maxSpeed, v));
+  let last = performance.now();
+  const tick = (now) => {
+    if (!spin) return (inertiaRaf = 0);
+    const dt = Math.min(now - last, 50);
+    last = now;
+    showFrame(spin.pos + v * dt);
+    v *= Math.pow(0.5, dt / INERTIA.halfLife);
+    if (Math.abs(v) < INERTIA.minSpeed) {
+      inertiaRaf = 0;
+      return captureThumb();
+    }
+    inertiaRaf = requestAnimationFrame(tick);
+  };
+  inertiaRaf = requestAnimationFrame(tick);
+}
+
+// 끌어서 돌리기: 캔버스 너비만큼 끌면 한 바퀴
+(() => {
+  let startX = 0;
+  let startPos = 0;
+  let samples = []; // 최근 움직임 [{t, pos}] — 놓을 때 속도 계산용
+  let dragId = null; // 지금 끌고 있는 포인터 (끌기 상태가 풀리지 않고 남는 일을 막는다)
+  let startY = 0;
+  let axis = null; // 처음 움직인 방향으로 정한다: 'x' = 좌우 회전, 'y' = 위에서 보기
+  let tiltT = 0;
+  let tiltRaf = 0;
+  spinBox.addEventListener('pointerdown', (e) => {
+    if (!spin || e.button !== 0 || dragId !== null) return;
+    dragId = e.pointerId;
+    stopInertia();
+    if (tiltRaf) cancelAnimationFrame(tiltRaf);
+    tiltRaf = 0;
+    startX = e.clientX;
+    startY = e.clientY;
+    axis = tiltT > 0.001 ? 'y' : null; // 정면으로 돌아오는 중에 다시 잡으면 이어서 위아래로
+    if (axis === 'y') startY = e.clientY + tiltT * spinBox.clientHeight * 0.45;
+    startPos = spin.pos;
+    samples = [{ t: e.timeStamp, pos: startPos }];
+    spinBox.classList.add('dragging');
+    try {
+      spinBox.setPointerCapture(e.pointerId);
+    } catch { /* 캡처가 안 돼도 끌기는 window pointerup으로 끝난다 */ }
+  });
+  spinBox.addEventListener('pointermove', (e) => {
+    if (!spin || e.pointerId !== dragId) return;
+    const dy = e.clientY - startY;
+    if (!axis) {
+      const ax = Math.abs(e.clientX - startX);
+      const ay = Math.abs(dy);
+      if (Math.max(ax, ay) < 6) return;
+      axis = ay > ax && spin.tilt ? 'y' : 'x';
+      if (axis === 'y') startY = e.clientY + (tiltT * spinBox.clientHeight * 0.45); // 지금 기울기에서 이어서
+    }
+    if (axis === 'y') {
+      // 위로 끌면 위에서 내려다본다 (캔버스 높이의 45%를 끌면 가장 위). 아래로는 정면에서 멈춘다
+      tiltT = Math.max(0, Math.min(1, -(e.clientY - startY) / (spinBox.clientHeight * 0.45)));
+      showTilt(tiltT);
+      currentView = null;
+      return;
+    }
+    const dx = e.clientX - startX;
+    const pos = startPos - (dx / spinBox.clientWidth) * spin.frames.length;
+    showFrame(pos);
+    samples.push({ t: e.timeStamp, pos });
+    while (samples.length > 2 && e.timeStamp - samples[0].t > 100) samples.shift();
+    currentView = null;
+    document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  });
+  const end = (e) => {
+    if (e.pointerId !== dragId) return;
+    dragId = null;
+    if (spinBox.hasPointerCapture(e.pointerId)) spinBox.releasePointerCapture(e.pointerId);
+    spinBox.classList.remove('dragging');
+    holdAutoplay();
+    if (axis === 'y') {
+      // 놓으면 정면으로 부드럽게 내려온다
+      axis = null;
+      const back = () => {
+        tiltT *= 0.86;
+        if (tiltT < 0.01) {
+          tiltT = 0;
+          tiltRaf = 0;
+          showFrame(0);
+          return captureThumb();
+        }
+        showTilt(tiltT);
+        tiltRaf = requestAnimationFrame(back);
+      };
+      tiltRaf = requestAnimationFrame(back);
+      return;
+    }
+    axis = null;
+    // 손을 멈춘 채 놓았으면(마지막 움직임이 오래전) 관성 없이 멈춘다
+    const a = samples[0];
+    const b = samples[samples.length - 1];
+    const fresh = e.type === 'pointerup' && e.timeStamp - b.t < 60 && b.t - a.t > 0;
+    startInertia(fresh ? (b.pos - a.pos) / (b.t - a.t) : 0);
+  };
+  spinBox.addEventListener('pointerup', end);
+  spinBox.addEventListener('pointercancel', end);
+  // 캡처를 잃거나 창 밖에서 놓아도 끌기를 끝낸다
+  spinBox.addEventListener('lostpointercapture', end);
+  window.addEventListener('pointerup', end);
+
+  // 커서가 회전 영역 밖으로 나가면 기다리지 않고 바로 다시 돈다
+  spinBox.addEventListener('pointerleave', () => {
+    if (!spinBox.classList.contains('dragging')) autoHoldUntil = 0;
+  });
+})();
+
+/* 커서 따라 보기 (참고: threeui Saltmere): 마우스를 올리면 자동 회전을 멈추고
+   부케가 커서 쪽으로 실제로 돌아본다 — 좌우 = 회전 영상 프레임(±FOLLOW_DEG)
+   위에서 보기는 위로 끌기가 맡으니 마우스만 올렸을 때 기울이지는 않는다
+   마우스가 나가면 자동 회전을 이어 간다. 끄는 동안은 끄는 대로 돈다 */
+(() => {
+  const FOLLOW_DEG = 40; // 커서를 끝까지 옮기면 돌아보는 각도
+  const EASE = 0.1;
+  let raf = 0;
+  let on = false; // 커서가 회전 영역 위에 있나
+  let base = null; // 커서 가운데일 때의 프레임 위치 (끌면 다시 잡는다)
+  let tgt = { nx: 0, ny: 0 };
+  const cur = { nx: 0, ny: 0, pos: 0 };
+  const follow = () => (spin ? (FOLLOW_DEG / 360) * spin.frames.length : 0);
+  const loop = () => {
+    cur.nx += (tgt.nx - cur.nx) * EASE;
+    cur.ny += (tgt.ny - cur.ny) * EASE;
+    let moving = Math.abs(tgt.nx - cur.nx) + Math.abs(tgt.ny - cur.ny) > 0.002;
+    if (on && base !== null && spin && !spinBox.classList.contains('dragging')) {
+      const want = base + cur.nx * follow();
+      cur.pos += (want - cur.pos) * EASE;
+      showFrame(cur.pos);
+      if (Math.abs(want - cur.pos) > 0.05) moving = true;
+    }
+    raf = moving ? requestAnimationFrame(loop) : 0;
+  };
+  const kick = () => {
+    if (!raf) raf = requestAnimationFrame(loop);
+  };
+  const norm = (e) => {
+    const r = spinBox.getBoundingClientRect();
+    return {
+      nx: Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)),
+      ny: Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)),
+    };
+  };
+  spinBox.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || !spin || reduceMotion.matches) return;
+    if (spinBox.classList.contains('dragging')) {
+      base = null; // 끄는 동안은 끄는 대로. 놓은 뒤 다시 잡는다
+      tgt = { nx: 0, ny: 0 };
+      return kick();
+    }
+    const n = norm(e);
+    on = true;
+    if (base === null && !inertiaRaf) {
+      // 지금 각도에서 시작 (놓은 뒤 관성이 끝난 다음): 커서 위치만큼 튀지 않게 기준을 거꾸로 잡는다
+      cur.pos = spin.pos;
+      cur.nx = n.nx;
+      base = spin.pos - n.nx * follow();
+    }
+    autoHoldUntil = Infinity; // 커서가 있는 동안 자동 회전은 쉰다
+    tgt = n;
+    kick();
+  });
+  spinBox.addEventListener('pointerleave', () => {
+    on = false;
+    base = null;
+    tgt = { nx: 0, ny: 0 };
+    if (!spinBox.classList.contains('dragging')) autoHoldUntil = 0;
+    kick();
+  });
+})();
+
+
+
 $('#retry').addEventListener('click', () => {
   const src = currentSrc;
+  if (src?.startsWith('spin:')) {
+    const a = ver().applied;
+    currentSrc = null;
+    return loadModel(a.shape, a.main[0]);
+  }
   viewer.src = null;
   loadError.hidden = true;
   loading.classList.remove('done');
@@ -176,12 +557,21 @@ const SIZE_FOV = { small: 1.6, medium: 1.35, large: 1.12 };
 let currentSize = null;
 
 function applySize(jump = false) {
+  // 회전 시안은 사진 배율로 크기를 보여 준다 (미디엄 = 1)
+  if (currentSize) spinImg.style.transform = `scale(${(SIZE_FOV.medium / SIZE_FOV[currentSize]).toFixed(3)})`;
   if (!idealFov || !currentSize) return;
   viewer.fieldOfView = `${(idealFov * SIZE_FOV[currentSize]).toFixed(2)}deg`;
   if (jump) viewer.jumpCameraToGoal();
 }
 
 function setView(name, jump = false) {
+  if (spinActive()) {
+    if (name === 'top' || name === 'bottom') return toast('실사 시안은 옆으로만 돌려 볼 수 있어요');
+    stopInertia();
+    holdAutoplay(3000);
+    showFrame(name === 'back' ? spin.frames.length / 2 : 0);
+    captureThumb();
+  }
   currentView = name;
   viewer.cameraOrbit = VIEWS[name];
   if (jump) viewer.jumpCameraToGoal();
@@ -189,6 +579,14 @@ function setView(name, jump = false) {
 }
 
 function rotateBy(deg) {
+  if (spinActive()) {
+    stopInertia();
+    holdAutoplay(3000);
+    showFrame(spin.pos + (deg / 360) * spin.frames.length);
+    currentView = null;
+    document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    return captureThumb();
+  }
   const o = viewer.getCameraOrbit();
   viewer.cameraOrbit = `${(o.theta * 180) / Math.PI + deg}deg ${(o.phi * 180) / Math.PI}deg ${o.radius}m`;
   currentView = null;
@@ -209,8 +607,17 @@ viewer.addEventListener('camera-change', (e) => {
   const tip = hint.querySelector('.hint-tooltip');
   if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   const UI = 'button, a, input, .toolbar, .versions, .canvas-arrow, .toast, .state-error';
+  // 커스텀 커서: 안내 원이 보이는 동안은 기본 커서를 숨겨 원이 커서 역할을 한다
+  const hide = () => {
+    hint.classList.remove('show');
+    canvas.classList.remove('hint-cursor');
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && !e.target.closest(UI)) hint.classList.add('grabbing');
+  });
+  window.addEventListener('pointerup', () => hint.classList.remove('grabbing'));
   canvas.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse' || e.target.closest(UI)) return hint.classList.remove('show');
+    if (e.pointerType !== 'mouse' || e.target.closest(UI)) return hide();
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
@@ -219,14 +626,19 @@ viewer.addEventListener('camera-change', (e) => {
     hint.classList.toggle('flip-x', x + 41 - 32 + tip.offsetWidth > r.width);
     hint.classList.toggle('flip-y', y + 44 - 32 + tip.offsetHeight > r.height);
     hint.classList.add('show');
+    canvas.classList.add('hint-cursor');
   });
-  canvas.addEventListener('pointerleave', () => hint.classList.remove('show'));
+  canvas.addEventListener('pointerleave', hide);
 })();
 
 let thumbTimer;
 function captureThumb() {
   clearTimeout(thumbTimer);
   thumbTimer = setTimeout(() => {
+    if (spinActive()) {
+      ver().thumb = spin.frames[spin.i];
+      return renderVersions();
+    }
     if (!viewer.loaded) return;
     try {
       ver().thumb = viewer.toDataURL('image/png');
@@ -518,11 +930,16 @@ function renderEstimate() {
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+// 3D·회전 시안 모두 다 불러오거나 실패하면 로딩 화면에 done이 붙는다
 function waitModel() {
   return new Promise((resolve) => {
-    const done = () => { viewer.removeEventListener('load', done); viewer.removeEventListener('error', done); resolve(); };
-    viewer.addEventListener('load', done);
-    viewer.addEventListener('error', done);
+    if (loading.classList.contains('done')) return resolve();
+    const mo = new MutationObserver(() => {
+      if (!loading.classList.contains('done')) return;
+      mo.disconnect();
+      resolve();
+    });
+    mo.observe(loading, { attributes: true, attributeFilter: ['class'] });
   });
 }
 
@@ -642,9 +1059,11 @@ function clearAll() {
 }
 
 async function downloadImage() {
-  if (!viewer.loaded) return toast('부케를 다 불러온 뒤에 저장할 수 있어요');
+  if (!spinActive() && !viewer.loaded) return toast('부케를 다 불러온 뒤에 저장할 수 있어요');
   const s = ver().applied; // 이미지는 3D에 보이는(적용된) 시안 기준
-  const blob = await viewer.toBlob({ mimeType: 'image/png', idealAspect: true });
+  const blob = spinActive()
+    ? await fetch(spin.frames[spin.i]).then((r) => r.blob())
+    : await viewer.toBlob({ mimeType: 'image/png', idealAspect: true });
   const img = await createImageBitmap(blob);
   const pad = 140;
   const c = document.createElement('canvas');

@@ -106,10 +106,66 @@ img { display: block; }
 .canvas[data-light="dim"]::before { background-image: url(/assets/figma/canvas-bg-dim.jpg); background-size: 100% 194.36%; background-position: 0 39.5%; }
 /* 3D는 툴바 위까지만 (툴바 bottom 108 + 높이 54) */
 model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; width: 100%; height: auto; --poster-color: transparent; background: transparent; }
+.spin-view { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: pan-y; user-select: none; }
+.spin-view[hidden] { display: none; }
+.spin-view.dragging { cursor: grabbing; }
+/* 회전 이미지 틀 */
+.spin-tilt { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+/* 단색 바탕 회전 시안 (Figma 301:177): 배경 사진 대신 영상 배경과 같은 색(--spin-bg), 부케 톤·그림자 없이 */
+.canvas.plain::before { background: var(--spin-bg, #fff); }
+.canvas.plain .spin-view img { filter: none; }
+/* 누끼 없는 영상 프레임: 가장자리만 바탕색으로 페이드 (영상 배경의 밝기 차이가 네모로 보이지 않게) */
+.spin-view.blend img {
+  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
+}
+@media (min-width: 1024px) { .canvas.plain .spin-view { top: 40px; bottom: 96px; } }
+.spin-view img {
+  max-width: 100%; max-height: 100%; aspect-ratio: 1; object-fit: contain; pointer-events: none;
+  /* 누끼 부케가 배경 사진에 붙어 보이게: 조명별 톤 + 벽에 지는 그림자(가까운 접촉 그림자 + 먼 그림자) */
+  filter: var(--spin-tone) drop-shadow(var(--spin-shadow-near)) drop-shadow(var(--spin-shadow-far));
+  transition: transform .35s ease, filter .4s ease;
+}
+/* 자연광: 왼쪽 위에서 들어오는 밝은 빛 → 그림자는 오른쪽 아래 */
+.canvas {
+  --spin-tone: brightness(1.02) saturate(.96) sepia(.04);
+  --spin-shadow-near: 2px 4px 4px rgba(70, 58, 40, .22);
+  --spin-shadow-far: 18px 26px 22px rgba(90, 75, 55, .16);
+}
+/* 실내광: 오른쪽 위 창빛, 조금 어둡고 따뜻하게 → 그림자는 왼쪽 아래 */
+.canvas[data-light="indoor"] {
+  --spin-tone: brightness(.9) saturate(.92) sepia(.12) contrast(.97);
+  --spin-shadow-near: -2px 4px 4px rgba(55, 42, 30, .28);
+  --spin-shadow-far: -20px 24px 26px rgba(60, 45, 32, .22);
+}
+/* 어두운 조명: 흐린 야외 → 어둡고 녹색 기운, 대비 낮게. 뒤에 벽이 없으니 그림자는 아주 옅게 */
+.canvas[data-light="dim"] {
+  --spin-tone: brightness(.78) saturate(.92) sepia(.08) contrast(.95);
+  --spin-shadow-near: 0 3px 6px rgba(10, 14, 6, .3);
+  --spin-shadow-far: 0 0 0 transparent;
+}
 
 /* 회전 안내 (244:1477): 마우스가 캔버스 안에 있을 때 커서를 따라다닌다. 원 중심 = 커서 */
 .drag-hint { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity .2s; will-change: transform; }
 .drag-hint.show { opacity: 1; }
+/* 커스텀 커서: 안내 원이 보이는 동안 기본 커서를 숨긴다. 잡고 끄는 동안 원이 작아지고 말풍선은 숨는다 */
+@media (hover: hover) and (pointer: fine) {
+  .canvas.hint-cursor, .canvas.hint-cursor model-viewer, .canvas.hint-cursor .spin-view { cursor: none; }
+}
+.hint-circle { transition: transform .2s cubic-bezier(.2, .8, .2, 1); }
+.drag-hint.grabbing .hint-circle { transform: scale(.72); }
+.hint-tooltip { transition: opacity .15s; }
+.drag-hint.grabbing .hint-tooltip { opacity: 0; }
+/* 커서 위치가 보이게 원 가운데 점 */
+.drag-hint::after { content: ''; position: absolute; left: 29px; top: 29px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-secondary, #6b6258); }
+/* 영상 배경색 바탕에서는 원래 원(#E2DED5)이 배경과 같은 색이라 안 보인다 → 흰 원 + 테두리 + 그림자로 띄운다 */
+.canvas.plain .hint-circle { opacity: 0; }
+.canvas.plain .drag-hint::before {
+  content: ''; position: absolute; left: 0; top: 0; width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(255, 255, 255, .9); box-shadow: 0 4px 14px rgba(40, 32, 24, .2), inset 0 0 0 1px rgba(40, 32, 24, .12);
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1);
+}
+.canvas.plain .drag-hint.grabbing::before { transform: scale(.72); }
 .drag-hint.flip-x .hint-tooltip { left: auto; right: 41px; }
 .drag-hint.flip-y .hint-tooltip { top: auto; bottom: 44px; }
 .hint-circle { width: 64px; height: 64px; }
@@ -369,7 +425,7 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   .gnb-menu a { padding: 10px 0; font-size: 14px; }
   .gnb.menu-open .gnb-menu { display: flex; }
 
-  model-viewer, .state-loading, .state-error { bottom: 100px; }
+  model-viewer, .spin-view, .state-loading, .state-error { bottom: 100px; }
   .toolbar { bottom: 38px; }
   .toast { bottom: 108px; }
   .canvas-arrow { top: 57.54%; }
@@ -389,7 +445,7 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 
   .builder { display: flex; flex-direction: column; flex: none; min-height: auto; }
   .canvas { height: 547px; flex: none; border-right: 0; }
-  model-viewer, .state-loading, .state-error { bottom: 84px; }
+  model-viewer, .spin-view, .state-loading, .state-error { bottom: 84px; }
   .drag-hint { display: none; }
 
   /* 툴바 (244:2378) */

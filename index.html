@@ -42,7 +42,6 @@
           shadow-softness="1"
           exposure="1.05"
           tone-mapping="neutral"
-          environment-image="neutral"
           camera-orbit="0deg 80deg auto"
           min-camera-orbit="auto 5deg auto"
           max-camera-orbit="auto 175deg auto"
@@ -50,6 +49,13 @@
           max-field-of-view="70deg"
           interpolation-decay="120"
         ></model-viewer>
+
+        <!-- 실사 회전 시안: 회전 영상에서 뽑은 프레임을 끌어서 돌려 본다 (전용 영상이 있는 조합만) -->
+        <div class="spin-view" id="spin" hidden>
+          <div class="spin-tilt" id="spin-tilt">
+            <img id="spin-img" alt="고른 부케의 360도 실사 시안" draggable="false" />
+          </div>
+        </div>
 
         <div class="state-loading" id="loading" role="status" aria-live="polite">
           <div class="silhouette"></div>
