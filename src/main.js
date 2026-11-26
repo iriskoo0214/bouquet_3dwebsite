@@ -198,6 +198,9 @@ function hideSpin() {
   spinToken++;
   stopInertia();
   stopAutoplay();
+  if (tiltRaf) cancelAnimationFrame(tiltRaf);
+  tiltRaf = 0;
+  tiltT = 0;
   spin = null;
   spinBox.hidden = true;
   $('#canvas').classList.remove('plain');
@@ -226,7 +229,7 @@ function startAutoplay() {
     if (!spin?.cfg.autoplay) return (autoRaf = 0);
     const dt = Math.min(now - autoLast, 50);
     autoLast = now;
-    const busy = spinBox.classList.contains('dragging') || inertiaRaf || now < autoHoldUntil || reduceMotion.matches;
+    const busy = spinBox.classList.contains('dragging') || inertiaRaf || tiltT > 0 || tiltRaf || now < autoHoldUntil || reduceMotion.matches;
     if (!busy) showFrame(spin.pos + (dt / (spin.cfg.autoplay * 1000)) * spin.frames.length);
     autoRaf = requestAnimationFrame(tick);
   };
@@ -383,6 +386,26 @@ function startInertia(v) {
   inertiaRaf = requestAnimationFrame(tick);
 }
 
+// 위에서 보기 정도: 0 = 정면(회전 영상), 1 = 가장 위. 위로 끌기와 '위' 버튼이 같이 쓴다
+let tiltT = 0;
+let tiltRaf = 0;
+function tiltTo(to, done) {
+  if (tiltRaf) cancelAnimationFrame(tiltRaf);
+  const step = () => {
+    tiltT += (to - tiltT) * 0.14;
+    if (Math.abs(to - tiltT) < 0.01) {
+      tiltT = to;
+      tiltRaf = 0;
+      if (to === 0) showFrame(0);
+      else showTilt(to);
+      return done?.();
+    }
+    showTilt(tiltT);
+    tiltRaf = requestAnimationFrame(step);
+  };
+  tiltRaf = requestAnimationFrame(step);
+}
+
 // 끌어서 돌리기: 캔버스 너비만큼 끌면 한 바퀴
 (() => {
   let startX = 0;
@@ -391,8 +414,6 @@ function startInertia(v) {
   let dragId = null; // 지금 끌고 있는 포인터 (끌기 상태가 풀리지 않고 남는 일을 막는다)
   let startY = 0;
   let axis = null; // 처음 움직인 방향으로 정한다: 'x' = 좌우 회전, 'y' = 위에서 보기
-  let tiltT = 0;
-  let tiltRaf = 0;
   spinBox.addEventListener('pointerdown', (e) => {
     if (!spin || e.button !== 0 || dragId !== null) return;
     dragId = e.pointerId;
@@ -494,7 +515,7 @@ function startInertia(v) {
     cur.nx += (tgt.nx - cur.nx) * EASE;
     cur.ny += (tgt.ny - cur.ny) * EASE;
     let moving = Math.abs(tgt.nx - cur.nx) + Math.abs(tgt.ny - cur.ny) > 0.002;
-    if (on && base !== null && spin && !spinBox.classList.contains('dragging')) {
+    if (on && base !== null && spin && !spinBox.classList.contains('dragging') && !tiltT && !tiltRaf) {
       const want = base + cur.nx * follow();
       cur.pos += (want - cur.pos) * EASE;
       showFrame(cur.pos);
@@ -569,11 +590,20 @@ function applySize(jump = false) {
 
 function setView(name, jump = false) {
   if (spinActive()) {
-    if (name === 'top' || name === 'bottom') return toast('실사 시안은 옆으로만 돌려 볼 수 있어요');
+    if (name === 'bottom') return toast('아래에서 본 모습은 아직 없어요');
+    if (name === 'top' && !spin.tilt) return toast('위에서 본 모습은 아직 없어요');
     stopInertia();
-    holdAutoplay(3000);
-    showFrame(name === 'back' ? spin.frames.length / 2 : 0);
-    captureThumb();
+    if (name === 'top') {
+      // 정면으로 돌린 뒤 위로 올라가 내려다본다. 다른 버튼을 누르거나 끌 때까지 그대로 둔다
+      holdAutoplay(Infinity);
+      if (!tiltT) showFrame(0);
+      tiltTo(1, captureThumb);
+    } else {
+      holdAutoplay(3000);
+      const frame = name === 'back' ? spin.frames.length / 2 : 0;
+      if (tiltT || tiltRaf) tiltTo(0, () => { showFrame(frame); captureThumb(); });
+      else { showFrame(frame); captureThumb(); }
+    }
   }
   currentView = name;
   viewer.cameraOrbit = VIEWS[name];
