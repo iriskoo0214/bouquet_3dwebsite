@@ -594,8 +594,8 @@ function applySize(jump = false) {
 
 function setView(name, jump = false) {
   if (spinActive()) {
-    if (name === 'bottom') return toast('아래에서 본 모습은 아직 없어요');
-    if (name === 'top' && !spin.tilt) return toast('위에서 본 모습은 아직 없어요');
+    if (name === 'bottom') return hint($('[data-view="bottom"]'), '아래에서 본 모습은 아직 없어요');
+    if (name === 'top' && !spin.tilt) return hint($('[data-view="top"]'), '위에서 본 모습은 아직 없어요');
     stopInertia();
     if (name === 'top') {
       // 정면으로 돌린 뒤 위로 올라가 내려다본다. 다른 버튼을 누르거나 끌 때까지 그대로 둔다
@@ -1168,7 +1168,7 @@ document.addEventListener('click', (e) => {
     case 'rotate-left': return rotateBy(-90);
     case 'rotate-right': return rotateBy(90);
     case 'hand': return toggleHand();
-    case 'ask': return toast('플로리스트에게 보내기는 다음 단계에서 연결돼요');
+    case 'ask': return hint(btn, '플로리스트에게 보내기는 다음 단계에서 연결돼요');
     case 'apply': return applyChanges();
     case 'panel-apply': togglePanel(false); return applyChanges(); // 패널을 닫고 3D에서 적용되는 걸 보여 준다
     case 'download': return downloadImage();
@@ -1207,7 +1207,8 @@ const Springs = (() => {
     raf = busy ? requestAnimationFrame(frame) : 0;
   }
   const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } };
-  return { S, kick, onRender: (r) => renders.push(r) };
+  const drop = (s) => { const i = list.indexOf(s); if (i > -1) list.splice(i, 1); };
+  return { S, kick, drop, onRender: (r) => renders.push(r) };
 })();
 function clamp01(v, lo = 0, hi = 1) { return Math.max(lo, Math.min(hi, v)); }
 Springs.onRender(() => {
@@ -1283,7 +1284,91 @@ function toggleHand() {
   const on = btn.getAttribute('aria-pressed') !== 'true';
   btn.setAttribute('aria-pressed', String(on));
   handEye.set(on);
-  if (on) toast('손에 든 모습은 손 모델을 준비하고 있어요');
+  if (on) hint(btn, '손에 든 모습은 손 모델을 준비하고 있어요');
+}
+
+/* ───────── 아직 없는 기능 안내 툴팁 ─────────
+   designbookmark 'Morph tooltip'의 움직임. 눌린 버튼 위에 말풍선이 뜨고, 다른 버튼을 누르면
+   사라지지 않고 그쪽으로 늘어나며 옮겨 가 새 글 폭에 맞춰 멈춘다. 말풍선 꼬리 없음, 툴바(또는 버튼) 위 12px.
+   - 나타나기 420 · 24 (72% 크기, 6px 아래에서)
+   - 가는 쪽 가장자리 620 · 36, 반대쪽 190 · 19 → 늘어났다가 따라붙는다
+   - 세로 위치 300 · 22 (원본 꼬리 값). 꼬리는 쓰지 않는다
+   - 글자 420 · 32: 옛 글은 온 쪽으로 빠지고 새 글은 반대쪽에서 14px 미끄러져 들어온다 (살짝 흐림)
+   2.4초 뒤 또는 다른 곳을 누르면 사라진다 */
+let hintUI;
+function hint(target, text) {
+  if (!target) return toast(text);
+  hintUI ??= makeHint();
+  hintUI.show(target, text);
+}
+function makeHint() {
+  const LEAD = [620, 36], TRAIL = [190, 19];
+  const tune = (s, [k, c]) => { s.k = k; s.c = reduceMotion.matches ? 2 * Math.sqrt(k) : c; };
+  const tip = document.createElement('div');
+  tip.className = 'hint';
+  tip.setAttribute('role', 'status');
+  tip.setAttribute('aria-live', 'polite');
+  document.body.append(tip);
+
+  const TL = Springs.S(0, ...LEAD), TR = Springs.S(0, ...LEAD), TY = Springs.S(0, 300, 22);
+  const A = Springs.S(0, 420, 24);
+  let labs = []; // { el, o, dir }
+  let cur = null, hideTimer = 0;
+
+  function show(target, text) {
+    const r = target.getBoundingClientRect();
+    // 툴바 안 버튼이면 툴바 테두리에서, 아니면 버튼에서 12px 위에 띄운다
+    const edge = (target.closest('.toolbar') ?? target).getBoundingClientRect().top;
+    const cx = r.left + r.width / 2, top = edge - 12;
+    const lab = document.createElement('span');
+    lab.className = 'hint-lab';
+    lab.textContent = text;
+    tip.append(lab);
+    const w = lab.offsetWidth;
+    const half = w / 2;
+    const fresh = A.x < 0.3;
+    const dir = fresh || !cur ? 0 : Math.sign(cx - cur.cx);
+    if (!fresh) {
+      tune(TR, dir >= 0 ? LEAD : TRAIL);
+      tune(TL, dir >= 0 ? TRAIL : LEAD);
+    }
+    [[TL, cx - half], [TR, cx + half], [TY, top]].forEach(([s, v]) => { s.t = v; if (fresh) { s.x = v; s.v = 0; } });
+    const o = Springs.S(fresh ? 1 : 0, 420, 32);
+    labs.forEach((l) => { l.o.t = 0; l.dir = -dir; });
+    labs.push({ el: lab, o, dir });
+    o.t = 1;
+    cur = { target, cx };
+    A.t = 1;
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hide, 2400);
+    Springs.kick();
+  }
+  function hide() { clearTimeout(hideTimer); A.t = 0; Springs.kick(); }
+  // 다른 곳을 누르거나 화면이 움직이면 닫는다
+  document.addEventListener('pointerdown', (e) => { if (A.t && cur && !cur.target.contains(e.target)) hide(); }, true);
+  addEventListener('resize', hide);
+  document.addEventListener('scroll', hide, true);
+
+  Springs.onRender(() => {
+    const a = clamp01(A.x, 0, 1.15), op = clamp01(A.x);
+    const vw = document.documentElement.clientWidth;
+    const l0 = Math.min(TL.x, TR.x - 30), w = TR.x - l0;
+    const l = clamp01(l0, 8, Math.max(8, vw - 8 - w)); // 화면 안에 머문다
+    tip.style.width = w.toFixed(2) + 'px';
+    tip.style.opacity = op.toFixed(3);
+    tip.style.transform = `translate(${l.toFixed(2)}px, ${(TY.x - 34 + (1 - a) * 6).toFixed(2)}px) scale(${(0.72 + 0.28 * a).toFixed(4)})`;
+    labs = labs.filter((lb) => {
+      const o = clamp01(lb.o.x);
+      if (lb.o.t === 0 && o < 0.01) { lb.el.remove(); Springs.drop(lb.o); return false; }
+      lb.el.style.opacity = o.toFixed(3);
+      lb.el.style.transform = `translateX(calc(-50% + ${(lb.dir * (1 - o) * 14).toFixed(2)}px))`;
+      lb.el.style.filter = o > 0.02 && o < 0.98 ? `blur(${((1 - o) * 3).toFixed(2)}px)` : 'none';
+      return true;
+    });
+    tip.style.visibility = op < 0.01 && A.t === 0 ? 'hidden' : 'visible';
+    if (op < 0.01 && A.t === 0) cur = null;
+  });
+  return { show, hide };
 }
 
 function toggleMenu(force) {

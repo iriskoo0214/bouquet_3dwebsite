@@ -531,3 +531,14 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   .gnb-brand { gap: 10px; }
   .logo { font-size: 14px; }
 }
+
+/* 아직 없는 기능 안내 툴팁 (main.js의 hint) — 위치·크기·글자는 스프링이 움직인다 */
+.hint { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; opacity: 0; visibility: hidden; will-change: transform, opacity; }
+.hint {
+  height: 34px; overflow: hidden; border-radius: var(--radius-default);
+  background: var(--color-bg-inverse); color: var(--color-text-on-inverse); transform-origin: 50% 100%;
+}
+.hint-lab {
+  position: absolute; left: 50%; top: 0; height: 34px; display: flex; align-items: center; padding: 0 14px;
+  white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.5; opacity: 0; will-change: transform, opacity;
+}
