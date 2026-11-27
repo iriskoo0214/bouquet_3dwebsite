@@ -5,17 +5,17 @@
   "sizes": {
     "small": {
       "label": "스몰",
-      "stems": "3~4송이",
+      "stems": "10~15송이",
       "scale": 0.8
     },
     "medium": {
       "label": "미디엄",
-      "stems": "5~7송이",
+      "stems": "16~25송이",
       "scale": 1.0
     },
     "large": {
       "label": "라지",
-      "stems": "8송이 이상",
+      "stems": "26송이 이상",
       "scale": 1.2
     }
   },

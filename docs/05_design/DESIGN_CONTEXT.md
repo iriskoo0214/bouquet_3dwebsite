@@ -41,7 +41,7 @@
 | Option/Title | 13 / SemiBold / 1.3 | 옵션명 (스몰) |
 | Label/Sub | 13 / Light / 1.3 | 보조 라벨, 도움말 |
 | Button/Small | 12 / SemiBold / 1.3 | UPLOAD IMAGE |
-| Option/Sub | 11 / Regular / 1.3 | 옵션 보조 (3~4송이) |
+| Option/Sub | 11 / Regular / 1.3 | 옵션 보조 (10~15송이) |
 | Caption/Regular·Medium·Bold | 11 / 400·500·700 / 1.5 | VERSION, 시안 라벨 |
 
 ## Component Rules

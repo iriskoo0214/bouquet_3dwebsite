@@ -17,7 +17,7 @@
 
 ## Option Button
 - **텍스트형** (모양·조명): 1줄, 높이 ~30, 2~3열 그리드
-- **2줄형** (크기·샘플 드레스): Option/Title + Option/Sub (예: 스몰 / 3~4송이)
+- **2줄형** (크기·샘플 드레스): Option/Title + Option/Sub (예: 스몰 / 10~15송이)
 - **이미지형** (샘플 드레스): 썸네일 + 2줄 텍스트
 - State: Default(흰 배경 · 1px border.default) / Selected(bg.inverse · on-inverse) / Disabled
 - radius 4

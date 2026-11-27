@@ -4,8 +4,8 @@
     "_formula": "예상 금액 = 제작·포장비 + 그린·필러(크기별) + 메인 꽃 평균 단가 × 메인 송이 수 + 서브 꽃 평균 단가 × 서브 송이 수 + 모양 추가금",
     "base": 130000,
     "filler": { "small": 12000, "medium": 18000, "large": 26000 },
-    "mainStems": { "small": 4, "medium": 6, "large": 9 },
-    "subStems": { "small": 6, "medium": 9, "large": 13 },
+    "mainStems": { "small": 5, "medium": 8, "large": 11 },
+    "subStems": { "small": 7, "medium": 12, "large": 17 },
     "shapeExtra": { "round": 0, "natural": 0, "cascade": 30000, "crescent": 40000 }
   },
   "mainColours": [
