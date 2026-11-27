@@ -1,7 +1,7 @@
 {
   "fallback": "/models/shapes/natural.glb",
-  "spin": { "dir": "/spins/natural__calla-white", "frames": 219, "plain": true, "blend": true, "bg": "#d7d8d6", "autoplay": 9.1,
-    "tilt": { "dir": "/spins/natural__calla-white/tilt", "frames": 63 } },
+  "spin": { "dir": "/spins/natural__calla-white-v2", "frames": 211, "plain": true, "blend": true, "bg": "#d7d8d6", "autoplay": 8.8,
+    "tilt": { "dir": "/spins/natural__calla-white-v2/tilt", "frames": 63 } },
   "sizes": {
     "small": {
       "label": "스몰",
@@ -27,8 +27,8 @@
       "model": "/models/shapes/round.glb",
       "orientation": "0deg 0deg -90deg",
       "ready": true,
-      "spin": { "dir": "/spins/round__rose-pink-v2", "frames": 235, "plain": true, "blend": true, "bg": "#e1dfe0", "autoplay": 14,
-        "tilt": { "dir": "/spins/round__rose-pink-v2/tilt", "frames": 64 } },
+      "spin": { "dir": "/spins/round__rose-pink-v3", "frames": 227, "plain": true, "blend": true, "bg": "#e1dfe0", "autoplay": 14,
+        "tilt": { "dir": "/spins/round__rose-pink-v3/tilt", "frames": 64 } },
       "variants": {
         "tulip-white": "/models/shapes/round__tulip-white.glb"
       }
