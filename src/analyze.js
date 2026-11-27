@@ -1,22 +1,69 @@
 // 레퍼런스 사진 분석: 사진 → { shape, main, sub } (shapes.json · flowers.json의 id)
 //
 // VITE_ANALYZE_URL이 있으면 그 주소(API 키를 가진 서버 함수)에 사진을 보내고,
-// 없으면 아직 AI가 연결되지 않은 프로토타입이라 정해진 결과를 돌려준다.
+// 없으면 브라우저 안의 CLIP 모델(아래 꽃 사진 확인과 같은 모델)로 모양과 메인 꽃을 고른다.
+import flowersData from './data/flowers.json';
+
 const ENDPOINT = import.meta.env.VITE_ANALYZE_URL;
 
-// 프로토타입용 고정 결과 (크레센트 레퍼런스 예시)
-const MOCK = { shape: 'crescent', main: ['phalaenopsis-white', 'calla-white'], sub: [] };
-
 export async function analyzeReference(file) {
-  if (!ENDPOINT) {
-    await new Promise((r) => setTimeout(r, 1400));
-    return MOCK;
-  }
+  if (!ENDPOINT) return analyzeInBrowser(file);
   const body = new FormData();
   body.append('image', file);
   const res = await fetch(ENDPOINT, { method: 'POST', body });
   if (!res.ok) throw new Error(`analyze failed: ${res.status}`);
   return res.json();
+}
+
+// 모양마다 사진 설명 문장 몇 개. 문장별 확률을 모양별로 더해 가장 큰 모양을 고른다
+// (CLIP은 짧고 쉬운 문장을 더 잘 알아본다. 라운드가 가장 흔한 모양이라 문장을 하나 더 둬서 살짝 기본값처럼 쓴다)
+const SHAPE_PROMPTS = {
+  round: ['a round bouquet', 'a ball-shaped bouquet of flowers', 'a dome-shaped bouquet', 'a round posy'],
+  natural: ['a loose natural bouquet', 'a messy wild bouquet', 'an asymmetric hand-tied garden bouquet'],
+  cascade: ['a cascade bouquet', 'a waterfall bouquet with flowers trailing down', 'a long hanging teardrop bouquet'],
+  crescent: ['a crescent bouquet', 'a crescent moon shaped bouquet', 'a bouquet curving to one side'],
+};
+
+// 메인 꽃 → 사진 설명 (판매 중인 꽃만 고른다)
+const FLOWER_PROMPTS = {
+  juliet: 'pink garden roses',
+  'ranunculus-pink': 'pink ranunculus flowers',
+  'tulip-pink': 'pink tulips',
+  'peony-pink': 'pink peonies',
+  'lily-white': 'white lilies',
+  'phalaenopsis-white': 'white phalaenopsis orchids',
+  'calla-white': 'white calla lilies',
+  'tulip-white': 'white tulips',
+  'rose-peach': 'peach roses',
+  'ranunculus-peach': 'peach ranunculus flowers',
+  'calla-coral': 'coral red calla lilies',
+  'tulip-red': 'red tulips',
+};
+
+async function analyzeInBrowser(file) {
+  const classify = await loadClassifier();
+  const url = URL.createObjectURL(file);
+  try {
+    const shapeLabels = Object.entries(SHAPE_PROMPTS).flatMap(([id, ps]) => ps.map((p) => ({ id, p })));
+    const shapeOut = await classify(url, shapeLabels.map((l) => l.p), { hypothesis_template: '{}' });
+    const shapeScore = {};
+    for (const o of shapeOut) {
+      const { id } = shapeLabels.find((l) => l.p === o.label);
+      shapeScore[id] = (shapeScore[id] || 0) + o.score;
+    }
+    const shape = Object.entries(shapeScore).sort((a, b) => b[1] - a[1])[0][0];
+
+    const avail = flowersData.mainFlowers.filter((f) => f.available && FLOWER_PROMPTS[f.id]);
+    const flowerOut = await classify(url, avail.map((f) => `a bouquet of ${FLOWER_PROMPTS[f.id]}`), { hypothesis_template: '{}' });
+    const ranked = flowerOut.map((o) => avail.find((f) => `a bouquet of ${FLOWER_PROMPTS[f.id]}` === o.label));
+    const top = flowerOut[0];
+    // 1위와 같은 색이면서 점수가 1위의 절반 이상인 꽃까지 함께 고른다
+    const main = ranked.filter((f, i) => i === 0 || (f.colour === ranked[0].colour && flowerOut[i].score >= top.score * 0.5));
+    console.info('reference analysis', { shapeScore, flowers: flowerOut.slice(0, 4) });
+    return { shape, main: main.map((f) => f.id), sub: [] };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /* ───────── 꽃 사진인지 확인 ─────────
