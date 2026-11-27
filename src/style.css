@@ -542,3 +542,4 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   position: absolute; left: 50%; top: 0; height: 34px; display: flex; align-items: center; padding: 0 14px;
   white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.5; opacity: 0; will-change: transform, opacity;
 }
+.swap-in { display: inline-block; }

@@ -941,6 +941,7 @@ function renderEstimate() {
   b.textContent = won(before);
 
   const btn = $('#primary-action');
+  if (applyPhase) cancelRollOut(btn);
   btn.disabled = applyPhase === 'loading';
   btn.toggleAttribute('aria-busy', applyPhase === 'loading');
   if (applyPhase === 'loading') {
@@ -958,7 +959,9 @@ function renderEstimate() {
     return;
   } else {
     btn.dataset.action = 'ask';
-    btn.textContent = 'ASK TO FLORIST';
+    // 변경이 0개로 줄면: 숫자가 0까지 굴러 내려간 뒤 ASK TO FLORIST로 바뀐다
+    if (!applyPhase && rollOut(btn, () => { btn.innerHTML = '<span class="swap-in">ASK TO FLORIST</span>'; fadeInText(btn.firstChild); })) { /* 굴러가는 중 */ }
+    else if (!btn._rollOut) btn.textContent = 'ASK TO FLORIST';
   }
   btn.removeAttribute('aria-label');
   renderPanelApply(n);
@@ -967,9 +970,10 @@ function renderEstimate() {
 // 모바일 패널 아래 APPLY CHANGES (305:444): 적용할 변경이 있을 때만 보인다
 function renderPanelApply(n) {
   const b = $('#panel-apply');
-  b.hidden = n === 0 || applyPhase !== null;
-  if (b.hidden) b.textContent = ''; // 다시 나타날 때 0에서 시작하도록 비운다
-  else setApplyLabel(b, n, true);
+  const hideIt = () => { b.hidden = true; b.textContent = ''; }; // 다시 나타날 때 0에서 시작하도록 비운다
+  if (n > 0 && !applyPhase) { b.hidden = false; setApplyLabel(b, n, true); }
+  else if (applyPhase) { cancelRollOut(b); hideIt(); }
+  else if (!rollOut(b, hideIt) && !b._rollOut) hideIt(); // 0이 되면 굴러 내려간 뒤 숨긴다
   b.setAttribute('aria-label', `변경사항 ${n}개 적용하고 3D로 보기`);
 }
 
@@ -978,6 +982,7 @@ function renderPanelApply(n) {
    (줄면 반대). 0.24초, ease-out cubic-bezier(0.23, 1, 0.32, 1). 움직임 줄이기 설정이면 바로 바뀐다 */
 const ROLL_EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 function setApplyLabel(btn, n, animate) {
+  cancelRollOut(btn);
   let rolls = btn.querySelector('.badge .rolls');
   if (!rolls) {
     // 버튼이 막 APPLY CHANGES로 바뀐 때도 0에서 굴러 올라온다
@@ -988,6 +993,19 @@ function setApplyLabel(btn, n, animate) {
   }
   rollNumber(rolls, n, animate && !reduceMotion.matches);
 }
+// 숫자를 0까지 굴려 내린 뒤 then()을 부른다. 굴릴 숫자가 없으면 false
+function rollOut(btn, then) {
+  const rolls = btn.querySelector('.badge .rolls');
+  if (!rolls || Number(rolls.dataset.n) <= 0 || reduceMotion.matches || btn.hidden) return false;
+  rollNumber(rolls, 0, true);
+  btn._rollOut = setTimeout(() => { btn._rollOut = 0; then(); }, 320);
+  return true;
+}
+function cancelRollOut(btn) { clearTimeout(btn._rollOut); btn._rollOut = 0; }
+function fadeInText(el) {
+  if (!reduceMotion.matches) el.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: ROLL_EASE });
+}
+
 function rollNumber(box, n, animate) {
   const prev = Number(box.dataset.n ?? n);
   const dir = n >= prev ? 1 : -1;
