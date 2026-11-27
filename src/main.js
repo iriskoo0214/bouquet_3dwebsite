@@ -107,12 +107,12 @@ let currentView = 'front';
 
 // 모양별 기본 모델에, 첫 번째 메인 꽃 전용 모델(variants)이 있으면 그걸 쓴다
 // 모델이 바뀌면 true를 돌려준다
-// 실사 회전 영상: 조합 전용(spins)이 있으면 그걸, 없으면 모든 모양·꽃에 공통 회전 영상(spin)을 보여 준다
+// 실사 회전 영상: 조합 전용(spins) → 모양 전용(shape.spin) → 모든 모양·꽃에 공통 회전 영상(spin) 순으로 고른다
 const { spin: defaultSpin } = shapesData;
 function loadModel(shapeId, mainFlowerId) {
   const shape = byId(shapes, shapeId);
   const variant = shape.variants?.[mainFlowerId];
-  const spinCfg = shape.spins?.[mainFlowerId] || defaultSpin || null;
+  const spinCfg = shape.spins?.[mainFlowerId] || shape.spin || defaultSpin || null;
   const src = spinCfg ? `spin:${spinCfg.dir}` : withBase(shape.ready ? variant || shape.model : fallback);
   if (currentSrc === src) return false;
   currentSrc = src;

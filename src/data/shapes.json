@@ -27,6 +27,7 @@
       "model": "/models/shapes/round.glb",
       "orientation": "0deg 0deg -90deg",
       "ready": true,
+      "spin": { "dir": "/spins/round__rose-pink", "frames": 240, "plain": true, "blend": true, "bg": "#e1dfe0", "autoplay": 15 },
       "variants": {
         "tulip-white": "/models/shapes/round__tulip-white.glb"
       }
