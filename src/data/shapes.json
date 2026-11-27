@@ -56,6 +56,7 @@
       "model": "/models/shapes/crescent.glb",
       "orientation": "0deg 0deg -90deg",
       "ready": true,
+      "spin": { "dir": "/spins/crescent__calla-coral", "frames": 1, "plain": true, "bg": "#dcdbdb" },
       "variants": {
         "ranunculus-pink": "/models/shapes/crescent__ranunculus-pink.glb"
       }

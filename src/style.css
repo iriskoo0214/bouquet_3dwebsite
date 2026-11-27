@@ -548,3 +548,5 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
 
 /* 빈 캔버스(레퍼런스를 올리기 전): 끌어서 돌리기 안내도 숨긴다 */
 .canvas.is-blank .drag-hint { display: none; }
+/* 돌지 않는 사진 시안(크레센트 등): 잡는 커서 대신 기본 커서 */
+.canvas.still .spin-view { cursor: default; }

@@ -208,7 +208,7 @@ function hideSpin() {
   tiltT = 0;
   spin = null;
   spinBox.hidden = true;
-  $('#canvas').classList.remove('plain');
+  $('#canvas').classList.remove('plain', 'still');
   $('#canvas').style.removeProperty('--spin-bg');
   spinBox.classList.remove('blend');
 }
@@ -285,6 +285,8 @@ async function loadSpin(cfg) {
   $('#canvas').style.setProperty('--spin-bg', cfg.bg || '#fff');
   // blend: 누끼 없이 영상 배경째 보여 주되, 가장자리를 흰 바탕에 녹여 네모가 안 보이게
   spinBox.classList.toggle('blend', !!cfg.blend);
+  // 사진 한 장(돌지 않는 시안): 끌기·회전 안내 없이 보여 준다
+  $('#canvas').classList.toggle('still', cfg.frames < 2);
   spinBox.hidden = false;
   loading.classList.add('done');
   applySize();
@@ -420,7 +422,7 @@ function tiltTo(to, done) {
   let startY = 0;
   let axis = null; // 처음 움직인 방향으로 정한다: 'x' = 좌우 회전, 'y' = 위에서 보기
   spinBox.addEventListener('pointerdown', (e) => {
-    if (!spin || e.button !== 0 || dragId !== null) return;
+    if (!spin || spin.frames.length < 2 || e.button !== 0 || dragId !== null) return;
     dragId = e.pointerId;
     stopInertia();
     if (tiltRaf) cancelAnimationFrame(tiltRaf);
@@ -592,7 +594,8 @@ viewer.addEventListener('camera-change', (e) => {
   });
   window.addEventListener('pointerup', () => hint.classList.remove('grabbing'));
   canvas.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse' || e.target.closest(UI)) return hide();
+    // 빈 캔버스·돌지 않는 사진 위에서는 돌릴 게 없으니 안내도, 커서 숨김도 하지 않는다
+    if (e.pointerType !== 'mouse' || e.target.closest(UI) || canvas.matches('.is-blank, .still')) return hide();
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
@@ -689,7 +692,7 @@ function renderFlowers(boxId, list, colour, selected, listKey) {
     b.setAttribute('role', 'checkbox');
     b.setAttribute('aria-checked', String(selected.includes(f.id)));
     b.innerHTML = `<span class="flower-info">
-        <span class="flower-thumb"><img src="${ICON}flower-thumb.png" width="24" height="24" alt="" /></span>
+        <span class="flower-thumb"><img src="${f.thumb ? withBase(f.thumb) : `${ICON}flower-thumb.png`}" width="24" height="24" alt="" /></span>
         <span class="flower-text"><span class="name">${f.name}</span><span class="meta">${f.available ? `1송이 ${won(f.price)}부터~` : '판매 시즌이 아니에요'}</span></span>
       </span>
       <span class="check" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M3 8.59L7.97 13.5L15 4.5" pathLength="1"/></svg></span>`;
