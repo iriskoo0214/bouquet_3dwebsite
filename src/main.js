@@ -51,7 +51,8 @@ const byId = (list, id) => list.find((x) => x.id === id);
 /* ───────── 상태 · 시안 버전 · 되돌리기 ───────── */
 // 각 시안은 자기만의 되돌리기 기록을 가진다.
 // history = 패널에서 고르는 중인 값(draft), applied = APPLY CHANGES로 3D에 반영된 값
-const versions = [{ name: '시안 1', history: [structuredClone(DEFAULT_STATE)], index: 0, applied: structuredClone(DEFAULT_STATE), thumb: '' }];
+// 처음에는 3D에 아무것도 없다(applied = null): 레퍼런스 사진을 올리거나 APPLY CHANGES를 눌러야 부케가 보인다
+const versions = [{ name: '시안 1', history: [structuredClone(DEFAULT_STATE)], index: 0, applied: null, thumb: '' }];
 let current = 0;
 let refs = []; // { id, url, status: 'uploading' | 'analyzing' | 'done' | 'error' }
 let lastCleared = null;
@@ -72,7 +73,7 @@ function commit(patch) {
 const PENDING_GROUPS = [['shape'], ['size'], ['mainColour', 'main'], ['subColour', 'sub']];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function pendingCount() {
-  const s = state(), a = ver().applied;
+  const s = state(), a = ver().applied || DEFAULT_STATE;
   return PENDING_GROUPS.filter((keys) => keys.some((k) => !same(s[k], a[k]))).length;
 }
 
@@ -509,7 +510,7 @@ $('#retry').addEventListener('click', () => {
   if (src?.startsWith('spin:')) {
     const a = ver().applied;
     currentSrc = null;
-    return loadModel(a.shape, a.main[0]);
+    return a && loadModel(a.shape, a.main[0]);
   }
   viewer.src = null;
   loadError.hidden = true;
@@ -926,14 +927,31 @@ let applyPhase = null; // null | 'loading' | 'done'
 // 크기는 카메라 거리로 표현한다 (스몰은 멀리, 라지는 가깝게). 모델이 바뀌면 true
 function showApplied() {
   const a = ver().applied;
+  $('#canvas').classList.toggle('is-blank', !a);
+  if (!a) return showEmpty();
   const changed = loadModel(a.shape, a.main[0]);
   if (currentSize !== a.size) { currentSize = a.size; applySize(); }
   return changed;
 }
 
+// 빈 캔버스: 영상·3D·불러오기 표시를 모두 숨긴다
+// 바탕은 회전 영상들과 같은 단색 (내추럴 #d7d8d6 · 라운드 #e1dfe0의 중간)
+const BLANK_BG = '#dcdbdb';
+function showEmpty() {
+  if (currentSrc === 'empty') return false;
+  currentSrc = 'empty';
+  hideSpin();
+  $('#canvas').classList.add('plain');
+  $('#canvas').style.setProperty('--spin-bg', BLANK_BG);
+  viewer.style.visibility = 'hidden';
+  loadError.hidden = true;
+  loading.classList.add('done');
+  return false;
+}
+
 function renderEstimate() {
   const now = estimate(state());
-  const before = estimate(ver().applied);
+  const before = estimate(ver().applied || state());
   const n = pendingCount();
   $('#price').textContent = won(now);
   const b = $('#price-before');
@@ -1052,8 +1070,9 @@ function waitModel() {
   });
 }
 
-async function applyChanges() {
-  if (applyPhase || pendingCount() === 0) return;
+// force: 바뀐 게 없어도 적용한다 (빈 캔버스에 레퍼런스 결과를 바로 보여 줄 때)
+async function applyChanges(force = false) {
+  if (applyPhase || (!force && pendingCount() === 0 && ver().applied)) return;
   const v = ver();
   v.applied = structuredClone(state());
   applyPhase = 'loading';
@@ -1355,8 +1374,8 @@ function clearAll() {
   lastCleared = { state: structuredClone(state()), applied: structuredClone(ver().applied), refs: [...refs] };
   refs = [];
   renderRefs();
-  // 모두 지우기는 3D에도 바로 반영한다
-  ver().applied = structuredClone(DEFAULT_STATE);
+  // 모두 지우기는 3D도 처음처럼 빈 캔버스로 돌린다
+  ver().applied = null;
   commit(structuredClone(DEFAULT_STATE));
   toast('모두 지웠어요', {
     label: '되돌리기',
@@ -1365,6 +1384,7 @@ function clearAll() {
 }
 
 async function downloadImage() {
+  if (!ver().applied) return toast('레퍼런스 사진을 올리면 부케를 저장할 수 있어요');
   if (!spinActive() && !viewer.loaded) return toast('부케를 다 불러온 뒤에 저장할 수 있어요');
   const s = ver().applied; // 이미지는 3D에 보이는(적용된) 시안 기준
   const blob = spinActive()
@@ -1435,12 +1455,14 @@ async function autofillFromReference(r, file) {
     renderRefs();
     if (!Object.keys(patch).length) return toast('사진에서 모양이나 꽃을 읽지 못했어요. 직접 골라 주세요');
     const before = ver().index;
+    const beforeApplied = ver().applied;
     commit(patch);
+    applyChanges(true); // 패널만 채우지 않고 3D에도 바로 보여 준다
     const s = state();
     const names = s.main.map((id) => byId(mainFlowers, id).name).join(' · ');
     toast(`레퍼런스에서 채웠어요: ${byId(shapes, s.shape).label} · ${names}`, {
       label: '되돌리기',
-      run: () => { ver().index = before; render(); },
+      run: () => { ver().index = before; ver().applied = beforeApplied; render(); },
     });
   } catch {
     r.status = 'done';

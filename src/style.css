@@ -543,3 +543,6 @@ model-viewer { position: absolute; left: 0; right: 0; top: 0; bottom: 170px; wid
   white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.5; opacity: 0; will-change: transform, opacity;
 }
 .swap-in { display: inline-block; }
+
+/* 빈 캔버스(레퍼런스를 올리기 전): 끌어서 돌리기 안내도 숨긴다 */
+.canvas.is-blank .drag-hint { display: none; }
