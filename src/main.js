@@ -711,7 +711,7 @@ function renderFlowers(boxId, list, colour, selected, listKey) {
 /* 체크 표시가 스스로 그려진다 — designbookmark 'Checkbox list'의 체크 모션 (스프링 160 · 20).
    체크하면 0.08초 뒤 선이 왼쪽부터 그려지고, 해제하면 거꾸로 지워진다.
    목록은 고를 때마다 새로 그려서, 꽃마다 스프링을 따로 보관해 이어서 움직인다 */
-const checkMarks = new Map(); // 'main:juliet' → { s, on, path, timer }
+const checkMarks = new Map(); // 'main:calla-white' → { s, on, path, timer }
 function drawCheck(key, path, on) {
   let m = checkMarks.get(key);
   if (!m) {

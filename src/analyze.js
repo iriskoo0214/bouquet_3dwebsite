@@ -26,18 +26,11 @@ const SHAPE_PROMPTS = {
 
 // 메인 꽃 → 사진 설명 (판매 중인 꽃만 고른다)
 const FLOWER_PROMPTS = {
-  juliet: 'pink garden roses',
-  'ranunculus-pink': 'pink ranunculus flowers',
-  'tulip-pink': 'pink tulips',
-  'peony-pink': 'pink peonies',
-  'lily-white': 'white lilies',
-  'phalaenopsis-white': 'white phalaenopsis orchids',
   'calla-white': 'white calla lilies',
-  'tulip-white': 'white tulips',
-  'rose-peach': 'peach roses',
-  'ranunculus-peach': 'peach ranunculus flowers',
-  'calla-coral': 'coral red calla lilies',
-  'tulip-red': 'red tulips',
+  'daffodil-white': 'white daffodils',
+  'rose-dusty-pink': 'dusty pink roses',
+  'orchid-dusty-pink': 'dusty pink phalaenopsis orchids',
+  'calla-dark-pink': 'dark pink calla lilies',
 };
 
 // 사진 가운데(부케가 주로 있는 곳)를 잘라 한 장 더 만든다 → 전체 사진과 함께 봐서 결과가 덜 흔들리게

@@ -9,40 +9,26 @@
     "shapeExtra": { "round": 0, "natural": 0, "cascade": 30000, "crescent": 40000 }
   },
   "mainColours": [
-    { "id": "blush", "label": "Blush Pink", "swatch": "#e8b4b6" },
-    { "id": "white", "label": "Pure White", "swatch": "#f7f5ef" },
-    { "id": "peach", "label": "Peach", "swatch": "#f0c0a0" },
-    { "id": "coral", "label": "Coral Red", "swatch": "#c4525b" }
+    { "id": "white", "label": "Pure White", "swatch": "#f4f1e8" },
+    { "id": "dusty-pink", "label": "Dusty Pink", "swatch": "#dcb6ae" },
+    { "id": "dark-pink", "label": "Dark Pink", "swatch": "#a8304a" }
   ],
   "subColours": [
-    { "id": "ivory", "label": "Ivory", "swatch": "#efe6d2" },
-    { "id": "green", "label": "Green", "swatch": "#a8b78a" },
-    { "id": "lavender", "label": "Lavender", "swatch": "#cdbfe0" },
-    { "id": "burgundy", "label": "Burgundy", "swatch": "#6b2a33" }
+    { "id": "white", "label": "White", "swatch": "#efece2" },
+    { "id": "lavender", "label": "Lavender", "swatch": "#b9b4e3" }
   ],
   "mainFlowers": [
-    { "id": "juliet", "name": "장미 줄리엣", "colour": "blush", "price": 6500, "available": true, "swatch": "#eab2ab" },
-    { "id": "ranunculus-pink", "name": "라넌큘러스 핑크", "colour": "blush", "price": 5000, "available": true, "swatch": "#f1bcc4" },
-    { "id": "tulip-pink", "name": "튤립 핑크", "colour": "blush", "price": 4500, "available": true, "swatch": "#f0a9b6" },
-    { "id": "peony-pink", "name": "작약 핑크", "colour": "blush", "price": 9000, "available": false, "swatch": "#e9a3b3" },
-    { "id": "lily-white", "name": "백합 화이트", "colour": "white", "price": 8000, "available": true, "swatch": "#f6f3ea" },
-    { "id": "phalaenopsis-white", "name": "호접란 화이트", "colour": "white", "price": 12000, "available": true, "swatch": "#fbfaf6" },
-    { "id": "calla-white", "name": "카라 화이트", "colour": "white", "price": 7000, "available": true, "swatch": "#f2f0e2" },
-    { "id": "tulip-white", "name": "튤립 화이트", "colour": "white", "price": 4500, "available": true, "swatch": "#f4efdc" },
-    { "id": "rose-peach", "name": "장미 피치", "colour": "peach", "price": 6000, "available": true, "swatch": "#f3bc9b" },
-    { "id": "ranunculus-peach", "name": "라넌큘러스 피치", "colour": "peach", "price": 5000, "available": true, "swatch": "#f5c8a8" },
-    { "id": "calla-coral", "name": "카라 코랄", "colour": "coral", "price": 7500, "available": true, "swatch": "#c95a5f" },
-    { "id": "tulip-red", "name": "튤립 레드", "colour": "coral", "price": 4500, "available": false, "swatch": "#c23a3e" }
+    { "id": "calla-white", "name": "카라 화이트", "colour": "white", "price": 7000, "available": true, "swatch": "#f2f0e2", "thumb": "/assets/flowers/calla-white.png" },
+    { "id": "daffodil-white", "name": "수선화 화이트", "colour": "white", "price": 4000, "available": true, "swatch": "#f3eedb", "thumb": "/assets/flowers/daffodil-white.png" },
+    { "id": "rose-dusty-pink", "name": "장미 더스티 핑크", "colour": "dusty-pink", "price": 6500, "available": true, "swatch": "#d8b3aa", "thumb": "/assets/flowers/rose-dusty-pink.png" },
+    { "id": "orchid-dusty-pink", "name": "호접란 더스티 핑크", "colour": "dusty-pink", "price": 12000, "available": true, "swatch": "#d0868a", "thumb": "/assets/flowers/orchid-dusty-pink.png" },
+    { "id": "calla-dark-pink", "name": "카라 다크 핑크", "colour": "dark-pink", "price": 7500, "available": true, "swatch": "#a8304a", "thumb": "/assets/flowers/calla-dark-pink.png" }
   ],
   "subFlowers": [
-    { "id": "spray-ivory", "name": "스프레이 장미 아이보리", "colour": "ivory", "price": 3000, "available": true, "swatch": "#efe5cf" },
-    { "id": "gypsophila", "name": "안개꽃", "colour": "ivory", "price": 2000, "available": true, "swatch": "#f6f3ec" },
-    { "id": "waxflower", "name": "왁스플라워", "colour": "ivory", "price": 2500, "available": true, "swatch": "#f1e9e4" },
-    { "id": "lisianthus-ivory", "name": "리시안셔스 아이보리", "colour": "ivory", "price": 3500, "available": false, "swatch": "#eee6d3" },
-    { "id": "eucalyptus", "name": "유칼립투스", "colour": "green", "price": 2500, "available": true, "swatch": "#9fb2a0" },
-    { "id": "ruscus", "name": "루스커스", "colour": "green", "price": 2000, "available": true, "swatch": "#7f9a6a" },
-    { "id": "sweetpea", "name": "스위트피", "colour": "lavender", "price": 3500, "available": true, "swatch": "#cbb8e2" },
-    { "id": "scabiosa", "name": "스카비오사", "colour": "lavender", "price": 3000, "available": true, "swatch": "#bfb0d8" },
-    { "id": "cosmos-chocolate", "name": "초코 코스모스", "colour": "burgundy", "price": 4000, "available": true, "swatch": "#5a2229" }
+    { "id": "delphinium-white", "name": "델피니움 화이트", "colour": "white", "price": 4500, "available": true, "swatch": "#f0f0ea", "thumb": "/assets/flowers/delphinium-white.png" },
+    { "id": "amaranthus-white", "name": "아마란서스 화이트", "colour": "white", "price": 4000, "available": true, "swatch": "#ebe3cf", "thumb": "/assets/flowers/amaranthus-white.png" },
+    { "id": "scabiosa-white", "name": "스카비오사 화이트", "colour": "white", "price": 3000, "available": true, "swatch": "#f0eee2", "thumb": "/assets/flowers/scabiosa-white.png" },
+    { "id": "veronica-white", "name": "베로니카 화이트", "colour": "white", "price": 3000, "available": true, "swatch": "#ecebe0", "thumb": "/assets/flowers/veronica-white.png" },
+    { "id": "sweetpea", "name": "스위트피", "colour": "lavender", "price": 3500, "available": true, "swatch": "#cbb8e2", "thumb": "/assets/flowers/sweetpea-lavender.png" }
   ]
 }
