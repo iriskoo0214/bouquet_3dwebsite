@@ -46,6 +46,49 @@ async function centerCrop(url, keep = 0.7) {
   return URL.createObjectURL(blob);
 }
 
+/* 실루엣으로 모양 보기: 바탕이 단색에 가까운 사진이면 부케만 떼어 내 '얼마나 꽉 찼는지·가로세로 비율'을 잰다.
+   CLIP은 꽃 한 송이 모양(라넌큘러스 = 동그라미)에 끌려 부케 전체 모양을 잘 못 보기 때문.
+   잰 값(2026-11-27): 라운드 0.43~0.49 · 내추럴 카라 0.26~0.29 · 크레센트 0.17 (가로≥세로)
+   → { shape } 확정, { between: ['round','natural'] } 애매, 바탕이 복잡하면 null */
+async function silhouetteShape(url) {
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  const S = 256, k = S / Math.max(img.naturalWidth, img.naturalHeight);
+  const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); // 투명 배경은 흰 바탕으로
+  g.drawImage(img, 0, 0, w, h);
+  const px = g.getImageData(0, 0, w, h).data;
+  const at = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
+  // 가장자리 6px 띠의 중간 색 = 바탕색, 그 흩어짐이 크면 바탕이 복잡한 사진
+  const border = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (x < 6 || y < 6 || x >= w - 6 || y >= h - 6) border.push(at(x, y));
+  const med = (i) => { const v = border.map((p) => p[i]).sort((a, b) => a - b); return v[v.length >> 1]; };
+  const bg = [med(0), med(1), med(2)];
+  const dist = (p) => Math.hypot(p[0] - bg[0], p[1] - bg[1], p[2] - bg[2]);
+  const spread = border.map(dist).sort((a, b) => a - b)[Math.floor(border.length * 0.9)];
+  if (spread > 60) return null;
+  const cut = Math.max(28, spread * 2);
+  let n = 0, x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (dist(at(x, y)) <= cut) continue;
+    n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const cover = n / (w * h);
+  if (cover < 0.02 || cover > 0.7) return null; // 부케를 못 찾았거나 화면을 꽉 채운 사진
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  const fill = n / (bw * bh), tall = bh / bw;
+  console.info('silhouette', { fill: +fill.toFixed(3), tall: +tall.toFixed(2), spread: +spread.toFixed(1) });
+  if (tall >= 1.5 && fill < 0.4) return { shape: 'cascade' }; // 세로로 길게 늘어진 모양
+  if (fill >= 0.4) return { shape: 'round' };
+  if (fill < 0.22) return { shape: tall <= 1.15 ? 'crescent' : 'cascade' };
+  if (fill < 0.34) return { shape: 'natural' };
+  return { between: ['round', 'natural'] };
+}
+
 // 라운드가 아닌 모양은 라운드보다 이만큼 높아야 고른다 (CLIP의 모양 구분이 약해서, 애매하면 가장 흔한 라운드로)
 const NON_ROUND_MARGIN = 1.25;
 
@@ -65,8 +108,15 @@ async function analyzeInBrowser(file) {
         shapeScore[id] = (shapeScore[id] || 0) + o.score / views.length;
       }
     }
-    const [best, bestScore] = Object.entries(shapeScore).sort((a, b) => b[1] - a[1])[0];
-    const shape = best !== 'round' && bestScore < shapeScore.round * NON_ROUND_MARGIN ? 'round' : best;
+    // 실루엣이 확실하면 그걸 쓰고, 애매하면 그 후보 안에서만 CLIP 점수로 고른다
+    const sil = await silhouetteShape(url).catch(() => null);
+    let shape;
+    if (sil?.shape) shape = sil.shape;
+    else {
+      const pool = Object.entries(shapeScore).filter(([id]) => !sil?.between || sil.between.includes(id));
+      const [best, bestScore] = pool.sort((a, b) => b[1] - a[1])[0];
+      shape = best !== 'round' && bestScore < (shapeScore.round || 0) * NON_ROUND_MARGIN ? 'round' : best;
+    }
 
     const avail = flowersData.mainFlowers.filter((f) => f.available && FLOWER_PROMPTS[f.id]);
     const flowerOut = await classify(url, avail.map((f) => `a bouquet of ${FLOWER_PROMPTS[f.id]}`), { hypothesis_template: '{}' });
@@ -74,7 +124,7 @@ async function analyzeInBrowser(file) {
     const top = flowerOut[0];
     // 1위와 같은 색이면서 점수가 1위의 절반 이상인 꽃까지 함께 고른다
     const main = ranked.filter((f, i) => i === 0 || (f.colour === ranked[0].colour && flowerOut[i].score >= top.score * 0.5));
-    console.info('reference analysis', { shapeScore, flowers: flowerOut.slice(0, 4) });
+    console.info('reference analysis', { shape, silhouette: sil, shapeScore, flowers: flowerOut.slice(0, 4) });
     return { shape, main: main.map((f) => f.id), sub: [] };
   } finally {
     URL.revokeObjectURL(url);
