@@ -89,10 +89,12 @@ img { display: block; }
   width: 30px; height: 30px; padding: 10px; border: 1px solid var(--color-border-default); border-radius: 1000px;
   align-items: center; justify-content: center; background: var(--color-bg-canvas);
 }
-.panel-btn img { width: 20px; height: 20px; flex: none; }
-.panel-btn[aria-expanded="true"] { background: var(--color-bg-inverse); border-color: var(--color-bg-inverse); }
+.panel-btn { color: var(--color-text-primary); transition: background-color .2s, border-color .2s, color .2s; }
+.panel-btn .filter-x { width: 20px; height: 20px; flex: none; overflow: visible; }
+.filter-x .fx-line { stroke: currentColor; stroke-width: .83; stroke-linecap: round; }
+.filter-x .fx-knob { fill: currentColor; }
 /* 열렸을 때 (244:2436): 검은 원 + 크림색 X */
-.panel-btn[aria-expanded="true"] img { content: url(/assets/figma/panel-close.svg); }
+.panel-btn[aria-expanded="true"] { background: var(--color-bg-inverse); border-color: var(--color-bg-inverse); color: var(--color-text-on-inverse); }
 .panel-foot { display: none; }
 
 /* canvas */

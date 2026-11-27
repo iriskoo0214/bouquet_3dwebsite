@@ -20,7 +20,15 @@
       </div>
       <!-- 859px 이하: 패널 열기 버튼 (244:2375) -->
       <button class="panel-btn" data-action="panel" aria-label="부케 설정 열기" aria-expanded="false" aria-controls="panel">
-        <img src="/assets/figma/panel-filter.svg" width="20" height="20" alt="" />
+        <!-- 필터(슬라이더 3줄) ↔ X: 위·아래 줄이 돌아 X가 되고 가운데 줄과 손잡이는 사라진다 (main.js panelIcon) -->
+        <svg class="filter-x" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+          <line class="fx-line" x1="-6.75" x2="6.75" y1="0" y2="0" transform="translate(10 5)" />
+          <line class="fx-line" x1="-6.75" x2="6.75" y1="0" y2="0" transform="translate(10 10)" />
+          <line class="fx-line" x1="-6.75" x2="6.75" y1="0" y2="0" transform="translate(10 15)" />
+          <rect class="fx-knob" x="-0.42" y="-2.5" width="0.83" height="5" rx="0.42" transform="translate(14.17 5)" />
+          <rect class="fx-knob" x="-0.42" y="-2.5" width="0.83" height="5" rx="0.42" transform="translate(5.83 10)" />
+          <rect class="fx-knob" x="-0.42" y="-2.5" width="0.83" height="5" rx="0.42" transform="translate(9.17 15)" />
+        </svg>
       </button>
       <nav class="gnb-menu" id="gnb-menu" aria-label="글로벌 메뉴">
         <a href="#">HOME</a>

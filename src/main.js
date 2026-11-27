@@ -1355,6 +1355,33 @@ function toggleMenu(force) {
   menuUI.set(open);
 }
 
+// 필터 아이콘 ↔ X (메뉴 아이콘과 같은 스프링 380/24)
+const panelIcon = (() => {
+  const lines = document.querySelectorAll('.filter-x .fx-line');
+  const knobs = document.querySelectorAll('.filter-x .fx-knob');
+  const knobAt = [[14.17, 5], [5.83, 10], [9.17, 15]];
+  const X = Springs.S(0, 380, 24);
+  Springs.onRender(() => {
+    const x = clamp01(X.x, -0.1, 1.1);
+    const k = clamp01(x);
+    // 위·아래 줄: 가운데로 모이며 ±45° 돌고, X 길이만큼 늘어난다
+    [[0, -5, 45], [2, 5, -45]].forEach(([i, dy, deg]) => {
+      lines[i].setAttribute('transform', `translate(10 10) rotate(${(deg * x).toFixed(2)}) translate(0 ${(dy * (1 - x)).toFixed(2)}) scale(${(1 + 0.32 * x).toFixed(3)} 1)`);
+    });
+    // 가운데 줄은 가로로 줄어들며 사라진다
+    lines[1].setAttribute('transform', `translate(10 10) scale(${Math.max(0, 1 - k).toFixed(3)} 1)`);
+    lines[1].style.opacity = (1 - k).toFixed(3);
+    lines.forEach((l) => { l.style.strokeWidth = (0.83 + 0.5 * k).toFixed(3); });
+    // 손잡이는 먼저 빠르게 사라진다
+    const kn = clamp01(k * 1.6);
+    knobs.forEach((r, i) => {
+      r.setAttribute('transform', `translate(${knobAt[i][0]} ${knobAt[i][1]}) scale(1 ${(1 - kn).toFixed(3)})`);
+      r.style.opacity = (1 - kn).toFixed(3);
+    });
+  });
+  return { set(open) { X.t = open ? 1 : 0; Springs.kick(); } };
+})();
+
 function togglePanel(force) {
   const panel = $('#panel');
   const open = force ?? !panel.classList.contains('open');
@@ -1363,6 +1390,7 @@ function togglePanel(force) {
   const btn = $('[data-action="panel"]');
   btn.setAttribute('aria-expanded', String(open));
   btn.setAttribute('aria-label', open ? '부케 설정 닫기' : '부케 설정 열기');
+  panelIcon.set(open);
 }
 
 // 화면이 넓어지면 모바일 패널·메뉴 상태를 정리한다
