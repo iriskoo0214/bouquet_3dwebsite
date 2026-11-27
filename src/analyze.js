@@ -40,18 +40,40 @@ const FLOWER_PROMPTS = {
   'tulip-red': 'red tulips',
 };
 
+// 사진 가운데(부케가 주로 있는 곳)를 잘라 한 장 더 만든다 → 전체 사진과 함께 봐서 결과가 덜 흔들리게
+async function centerCrop(url, keep = 0.7) {
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  const w = img.naturalWidth * keep, h = img.naturalHeight * keep;
+  const c = document.createElement('canvas');
+  c.width = Math.round(w); c.height = Math.round(h);
+  c.getContext('2d').drawImage(img, (img.naturalWidth - w) / 2, (img.naturalHeight - h) / 2, w, h, 0, 0, w, h);
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+  return URL.createObjectURL(blob);
+}
+
+// 라운드가 아닌 모양은 라운드보다 이만큼 높아야 고른다 (CLIP의 모양 구분이 약해서, 애매하면 가장 흔한 라운드로)
+const NON_ROUND_MARGIN = 1.25;
+
 async function analyzeInBrowser(file) {
   const classify = await loadClassifier();
   const url = URL.createObjectURL(file);
+  let crop;
   try {
+    crop = await centerCrop(url).catch(() => null);
     const shapeLabels = Object.entries(SHAPE_PROMPTS).flatMap(([id, ps]) => ps.map((p) => ({ id, p })));
-    const shapeOut = await classify(url, shapeLabels.map((l) => l.p), { hypothesis_template: '{}' });
     const shapeScore = {};
-    for (const o of shapeOut) {
-      const { id } = shapeLabels.find((l) => l.p === o.label);
-      shapeScore[id] = (shapeScore[id] || 0) + o.score;
+    const views = crop ? [url, crop] : [url];
+    for (const v of views) {
+      const out = await classify(v, shapeLabels.map((l) => l.p), { hypothesis_template: '{}' });
+      for (const o of out) {
+        const { id } = shapeLabels.find((l) => l.p === o.label);
+        shapeScore[id] = (shapeScore[id] || 0) + o.score / views.length;
+      }
     }
-    const shape = Object.entries(shapeScore).sort((a, b) => b[1] - a[1])[0][0];
+    const [best, bestScore] = Object.entries(shapeScore).sort((a, b) => b[1] - a[1])[0];
+    const shape = best !== 'round' && bestScore < shapeScore.round * NON_ROUND_MARGIN ? 'round' : best;
 
     const avail = flowersData.mainFlowers.filter((f) => f.available && FLOWER_PROMPTS[f.id]);
     const flowerOut = await classify(url, avail.map((f) => `a bouquet of ${FLOWER_PROMPTS[f.id]}`), { hypothesis_template: '{}' });
@@ -63,6 +85,7 @@ async function analyzeInBrowser(file) {
     return { shape, main: main.map((f) => f.id), sub: [] };
   } finally {
     URL.revokeObjectURL(url);
+    if (crop) URL.revokeObjectURL(crop);
   }
 }
 
